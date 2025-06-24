@@ -239,42 +239,9 @@ body {
     text-overflow: ellipsis;
 }
 
-.profile-actions {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
+/* Removed old profile-actions styles - using updated ones below */
 
-.profile-item:hover .profile-actions {
-    opacity: 1;
-}
-
-.action-btn {
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 6px;
-    cursor: pointer;
-    font-size: 10px;
-    transition: background 0.3s ease;
-}
-
-.action-btn:hover {
-    background: #5a67d8;
-}
-
-.action-btn.delete {
-    background: #e53e3e;
-}
-
-.action-btn.delete:hover {
-    background: #c53030;
-}
+/* Removed old action-btn styles - using updated ones below */
 
 .status-indicator {
     display: inline-block;
@@ -886,6 +853,8 @@ body {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+    opacity: 1;
+    transition: opacity 0.2s ease;
 }
 
 .action-btn {
@@ -904,6 +873,24 @@ body {
 
 .action-btn.delete:hover {
     background: #fed7d7;
+}
+
+.edit-btn {
+    color: #4299e1;
+}
+
+.edit-btn:hover {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.delete-btn {
+    color: #e53e3e;
+}
+
+.delete-btn:hover {
+    background: #fed7d7;
+    color: #c53030;
 }
 
 /* Progress and Results sections */

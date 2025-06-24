@@ -188,8 +188,8 @@ function renderProfiles() {
         return;
     }
     
-    container.innerHTML = profiles.map(profile => `
-        <div class="profile-item" data-profile="${profile.name}">
+    container.innerHTML = profiles.map((profile, index) => `
+        <div class="profile-item" data-profile-index="${index}">
             <div class="profile-name">
                 <span class="status-indicator"></span>
                 ${escapeHtml(profile.name)}
@@ -198,17 +198,45 @@ function renderProfiles() {
                 ${escapeHtml(profile.info.substring(0, 100))}${profile.info.length > 100 ? '...' : ''}
             </div>
             <div class="profile-actions">
-                <button class="action-btn" onclick="editProfile('${escapeHtml(profile.name)}')">✏️</button>
-                <button class="action-btn delete" onclick="deleteProfile('${escapeHtml(profile.name)}')">🗑️</button>
+                <button class="action-btn edit-btn" data-profile-index="${index}">✏️</button>
+                <button class="action-btn delete-btn" data-profile-index="${index}">🗑️</button>
             </div>
         </div>
     `).join('');
     
-    // Add click listeners
+    // Add click listeners for profile selection
     container.querySelectorAll('.profile-item').forEach(item => {
         item.addEventListener('click', (e) => {
             if (e.target.classList.contains('action-btn')) return;
-            selectProfile(item.dataset.profile);
+            const profileIndex = parseInt(item.dataset.profileIndex);
+            const profile = profiles[profileIndex];
+            if (profile) {
+                selectProfile(profile.name);
+            }
+        });
+    });
+    
+    // Add click listeners for edit buttons
+    container.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const profileIndex = parseInt(btn.dataset.profileIndex);
+            const profile = profiles[profileIndex];
+            if (profile) {
+                openProfileModal(profile.name);
+            }
+        });
+    });
+    
+    // Add click listeners for delete buttons
+    container.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const profileIndex = parseInt(btn.dataset.profileIndex);
+            const profile = profiles[profileIndex];
+            if (profile) {
+                deleteProfile(profile.name);
+            }
         });
     });
 }
@@ -218,7 +246,9 @@ function selectProfile(profileName) {
     
     // Update UI
     elements.profileList.querySelectorAll('.profile-item').forEach(item => {
-        item.classList.toggle('selected', item.dataset.profile === profileName);
+        const profileIndex = parseInt(item.dataset.profileIndex);
+        const profile = profiles[profileIndex];
+        item.classList.toggle('selected', profile && profile.name === profileName);
     });
     
     // Enable autofill button
@@ -317,9 +347,8 @@ async function deleteProfile(profileName) {
     }
 }
 
-// Make functions globally available for onclick handlers
-window.editProfile = (profileName) => openProfileModal(profileName);
-window.deleteProfile = deleteProfile;
+// Functions are now handled by event listeners in renderProfiles()
+// No need for global functions anymore
 
 function updateCharacterCount() {
     elements.nameCount.textContent = elements.profileName.value.length;
