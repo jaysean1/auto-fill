@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Selector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100%;
+        }
+
+        .profile-list {
+            margin-bottom: 20px;
+        }
+
+        .profile-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .profile-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .profile-item.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+        }
+
+        .profile-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-info {
+            color: #718096;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .profile-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .profile-item:hover .profile-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: #5a67d8;
+        }
+
+        .action-btn.delete {
+            background: #e53e3e;
+        }
+
+        .action-btn.delete:hover {
+            background: #c53030;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.secondary {
+            background: #4a5568;
+        }
+
+        .btn.secondary:hover {
+            background: #2d3748;
+            box-shadow: 0 8px 20px rgba(74, 85, 104, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #48bb78;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <button class="btn" id="addProfileBtn">➕ Add Profile</button>
+            <button class="btn" id="autofillBtn" disabled>🚀 Start Autofill</button>
+        </div>
+
+        <div class="profile-list" id="profileList">
+            <!-- Sample profiles for demonstration -->
+            <div class="profile-item" data-profile="jaysean">
+                <div class="profile-name">
+                    <span class="status-indicator"></span>
+                    jaysean
+                </div>
+                <div class="profile-info">
+                    我叫千岁，英文名是jaysean 出生于1989/07/31 邮箱jaysean.qian@gmail.com
+                </div>
+                <div class="profile-actions">
+                    <button class="action-btn" onclick="editProfile('jaysean')">✏️</button>
+                    <button class="action-btn delete" onclick="deleteProfile('jaysean')">🗑️</button>
+                </div>
+            </div>
+
+            <div class="profile-item" data-profile="xinyi">
+                <div class="profile-name">
+                    <span class="status-indicator"></span>
+                    xinyi han
+                </div>
+                <div class="profile-info">
+                    我喜欢唱歌跳舞，叫韩心怡，最近在澳洲读design ,Unit 308, 119 Ross Street, Glebe, NSW 2037, Australia
+                </div>
+                <div class="profile-actions">
+                    <button class="action-btn" onclick="editProfile('xinyi')">✏️</button>
+                    <button class="action-btn delete" onclick="deleteProfile('xinyi')">🗑️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedProfile = null;
+
+        // Profile selection logic
+        document.querySelectorAll('.profile-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.classList.contains('action-btn')) return;
+                
+                // Remove previous selection
+                document.querySelectorAll('.profile-item').forEach(p => p.classList.remove('selected'));
+                
+                // Select current item
+                this.classList.add('selected');
+                selectedProfile = this.dataset.profile;
+                
+                // Enable autofill button
+                document.getElementById('autofillBtn').disabled = false;
+            });
+        });
+
+        // Button handlers
+        document.getElementById('addProfileBtn').addEventListener('click', function() {
+            // In a real implementation, this would communicate with the profile editor
+            alert('Add Profile functionality - would open profile editor');
+        });
+
+        document.getElementById('autofillBtn').addEventListener('click', function() {
+            if (selectedProfile) {
+                alert(`Starting autofill with profile: ${selectedProfile}`);
+                // In a real implementation, this would trigger the autofill process
+            }
+        });
+
+        function editProfile(profileName) {
+            alert(`Edit profile: ${profileName}`);
+            // In a real implementation, this would open the profile editor with the selected profile
+        }
+
+        function deleteProfile(profileName) {
+            if (confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
+                alert(`Profile "${profileName}" deleted`);
+                // In a real implementation, this would remove the profile from localStorage
+            }
+        }
+    </script>
+</body>
+</html>

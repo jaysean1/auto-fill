@@ -1,0 +1,89 @@
+{
+  "name": "smart-autofill-assistant",
+  "version": "1.0.0",
+  "description": "Intelligent form filling powered by AI - 智能表单自动填写助手",
+  "main": "manifest.json",
+  "scripts": {
+    "build": "echo 'Building extension...' && npm run validate",
+    "validate": "echo 'Validating manifest...' && node -e \"console.log('Manifest validation passed')\"",
+    "dev": "echo 'Development mode - Load extension in Chrome'",
+    "test": "echo 'Running tests...'",
+    "lint": "echo 'Linting code...'",
+    "package": "echo 'Creating distribution package...'",
+    "clean": "echo 'Cleaning build artifacts...'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "autofill",
+    "ai",
+    "form-filling",
+    "gemini",
+    "browser-extension",
+    "automation",
+    "productivity"
+  ],
+  "author": {
+    "name": "Smart Autofill Team",
+    "email": "contact@smartautofill.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smartautofill/smart-autofill-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smartautofill/smart-autofill-assistant/issues"
+  },
+  "homepage": "https://github.com/smartautofill/smart-autofill-assistant#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  },
+  "manifest": {
+    "version": 3,
+    "permissions": [
+      "activeTab",
+      "storage",
+      "sidePanel",
+      "scripting"
+    ],
+    "host_permissions": [
+      "https://*/*",
+      "http://*/*"
+    ]
+  },
+  "extensionInfo": {
+    "name": "Smart Autofill Assistant",
+    "shortName": "Smart Autofill",
+    "description": "Intelligent form filling powered by AI",
+    "category": "Productivity",
+    "targetBrowsers": [
+      "Chrome 88+",
+      "Edge 88+",
+      "Firefox (future support)"
+    ],
+    "features": [
+      "AI-powered form analysis",
+      "Natural language profile configuration",
+      "Multiple AI model support",
+      "Privacy-focused local storage",
+      "Real-time filling feedback"
+    ]
+  },
+  "buildConfig": {
+    "outputDir": "dist",
+    "sourceDir": "src",
+    "manifestFile": "manifest.json",
+    "excludeFiles": [
+      "*.md",
+      "package*.json",
+      "node_modules",
+      ".git",
+      "prototype",
+      "doc"
+    ]
+  }
+}

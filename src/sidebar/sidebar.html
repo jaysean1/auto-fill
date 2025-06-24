@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Autofill Assistant</title>
+    <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+    <div class="sidebar-container">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">🧾</span>
+                <span class="logo-text">Smart Autofill</span>
+            </div>
+            <div class="page-info" id="pageInfo">
+                <span class="page-status" id="pageStatus">Ready</span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="main">
+                <span class="tab-icon">🚀</span>
+                <span class="tab-text">Autofill</span>
+            </button>
+            <button class="nav-tab" data-tab="settings">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-text">Settings</span>
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Main Tab -->
+            <div class="tab-pane active" id="main-tab">
+                <!-- Profile Selection Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3>Select Profile</h3>
+                        <button class="btn btn-small btn-secondary" id="addProfileBtn">
+                            <span class="btn-icon">➕</span>
+                            Add Profile
+                        </button>
+                    </div>
+
+                    <div class="profile-list" id="profileList">
+                        <!-- Profiles will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Page Info Section -->
+                <div class="section">
+                    <div class="page-info-card" id="pageInfoCard">
+                        <div class="page-info-icon">📄</div>
+                        <div class="page-info-content">
+                            <div class="page-info-title" id="pageInfoTitle">Ready to analyze</div>
+                            <div class="page-info-description" id="pageInfoDescription">Click "Start Autofill" to begin</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Section -->
+                <div class="section">
+                    <button class="btn btn-primary btn-large btn-full" id="startAutofillBtn" disabled>
+                        <span class="btn-icon">🚀</span>
+                        Start Autofill
+                    </button>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="section" id="progressSection" style="display: none;">
+                    <h4>Progress</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0% Complete</div>
+                    
+                    <div class="steps-list" id="stepsList">
+                        <!-- Steps will be populated during autofill -->
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="section" id="resultsSection" style="display: none;">
+                    <h4>Fill Results</h4>
+                    <div class="results-list" id="resultsList">
+                        <!-- Results will be populated after autofill -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane" id="settings-tab">
+                <div class="tab-header">
+                    <h3>Settings</h3>
+                </div>
+
+                <div class="settings-section">
+                    <div class="setting-group">
+                        <label class="setting-label">AI Model Provider</label>
+                        <select class="setting-select" id="modelProvider">
+                            <option value="local">Local Flash-Lite</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="openai">OpenAI GPT</option>
+                            <option value="claude">Anthropic Claude</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-group" id="apiKeyGroup" style="display: none;">
+                        <label class="setting-label">API Key</label>
+                        <input type="password" class="setting-input" id="apiKeyInput" placeholder="Enter your API key...">
+                        <div class="setting-help">Your API key is stored locally and never shared</div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">Auto-analyze pages</label>
+                        <div class="toggle-switch" id="autoAnalyzeToggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">Debug mode</label>
+                        <div class="toggle-switch" id="debugModeToggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="api-status" id="apiStatus">
+                        <div class="status-indicator">
+                            <div class="status-dot"></div>
+                            <span class="status-text">Connected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn btn-primary" id="saveSettingsBtn" disabled>
+                        <span class="btn-icon">💾</span>
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Editor Modal -->
+        <div class="modal" id="profileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Add Profile</h3>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="profileName">Profile Name *</label>
+                            <input type="text" id="profileName" class="form-input" placeholder="e.g., jaysean, work profile" maxlength="50" required>
+                            <div class="character-count">
+                                <span id="nameCount">0</span>/50
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="profileInfo">Profile Information *</label>
+                            <textarea id="profileInfo" class="form-input form-textarea" placeholder="Enter your information in natural language..." maxlength="1000" required></textarea>
+                            <div class="character-count">
+                                <span id="infoCount">0</span>/1000
+                            </div>
+                        </div>
+
+                        <div class="example-info">
+                            <h4>💡 Example Information:</h4>
+                            <p><strong>Personal:</strong> 我叫千岁，英文名是jaysean 出生于1989/07/31 邮箱jaysean.qian@gmail.com</p>
+                            <p><strong>Address:</strong> 我喜欢唱歌跳舞，叫韩心怡，最近在澳洲读design ,Unit 308, 119 Ross Street, Glebe, NSW 2037, Australia</p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelProfileBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveProfileBtn" form="profileForm" disabled>
+                        <span class="btn-icon">💾</span>
+                        Save Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processing...</div>
+        </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+</html>

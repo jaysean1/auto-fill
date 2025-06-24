@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Form - Smart Autofill Assistant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .required {
+            color: #e53e3e;
+        }
+        
+        .info {
+            background: #e6f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧾 Smart Autofill Assistant - Test Forms</h1>
+    
+    <div class="info">
+        <strong>测试说明：</strong> 这个页面包含多种类型的表单，用于测试Smart Autofill Assistant的功能。
+        请安装插件后，在此页面测试自动填写功能。
+    </div>
+
+    <!-- Registration Form -->
+    <div class="form-container">
+        <h2>用户注册表单</h2>
+        <form id="registrationForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">名字 <span class="required">*</span></label>
+                    <input type="text" id="firstName" name="firstName" placeholder="请输入您的名字" required>
+                </div>
+                <div class="form-group">
+                    <label for="lastName">姓氏</label>
+                    <input type="text" id="lastName" name="lastName" placeholder="请输入您的姓氏">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">邮箱地址 <span class="required">*</span></label>
+                <input type="email" id="email" name="email" placeholder="请输入您的邮箱地址" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">电话号码</label>
+                <input type="tel" id="phone" name="phone" placeholder="请输入您的电话号码">
+            </div>
+            
+            <div class="form-group">
+                <label for="birthDate">出生日期</label>
+                <input type="date" id="birthDate" name="birthDate">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码 <span class="required">*</span></label>
+                <input type="password" id="password" name="password" placeholder="请输入密码" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">确认密码 <span class="required">*</span></label>
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="请再次输入密码" required>
+            </div>
+            
+            <button type="submit">注册账户</button>
+        </form>
+    </div>
+
+    <!-- Contact Form -->
+    <div class="form-container">
+        <h2>联系信息表单</h2>
+        <form id="contactForm">
+            <div class="form-group">
+                <label for="fullName">全名 <span class="required">*</span></label>
+                <input type="text" id="fullName" name="fullName" placeholder="请输入您的全名" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="companyName">公司名称</label>
+                <input type="text" id="companyName" name="companyName" placeholder="请输入公司名称">
+            </div>
+            
+            <div class="form-group">
+                <label for="jobTitle">职位</label>
+                <input type="text" id="jobTitle" name="jobTitle" placeholder="请输入您的职位">
+            </div>
+            
+            <div class="form-group">
+                <label for="contactEmail">联系邮箱 <span class="required">*</span></label>
+                <input type="email" id="contactEmail" name="contactEmail" placeholder="请输入联系邮箱" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="website">网站</label>
+                <input type="url" id="website" name="website" placeholder="https://example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="address">地址</label>
+                <textarea id="address" name="address" rows="3" placeholder="请输入详细地址"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">城市</label>
+                    <input type="text" id="city" name="city" placeholder="城市">
+                </div>
+                <div class="form-group">
+                    <label for="state">省份/州</label>
+                    <input type="text" id="state" name="state" placeholder="省份或州">
+                </div>
+                <div class="form-group">
+                    <label for="zipCode">邮政编码</label>
+                    <input type="text" id="zipCode" name="zipCode" placeholder="邮政编码">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="country">国家</label>
+                <select id="country" name="country">
+                    <option value="">请选择国家</option>
+                    <option value="CN">中国</option>
+                    <option value="US">美国</option>
+                    <option value="AU">澳大利亚</option>
+                    <option value="UK">英国</option>
+                    <option value="CA">加拿大</option>
+                </select>
+            </div>
+            
+            <button type="submit">提交联系信息</button>
+        </form>
+    </div>
+
+    <!-- Login Form -->
+    <div class="form-container">
+        <h2>登录表单</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginEmail">邮箱或用户名 <span class="required">*</span></label>
+                <input type="text" id="loginEmail" name="loginEmail" placeholder="请输入邮箱或用户名" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="loginPassword">密码 <span class="required">*</span></label>
+                <input type="password" id="loginPassword" name="loginPassword" placeholder="请输入密码" required>
+            </div>
+            
+            <button type="submit">登录</button>
+        </form>
+    </div>
+
+    <!-- Complex Form with Various Field Types -->
+    <div class="form-container">
+        <h2>复杂表单测试</h2>
+        <form id="complexForm">
+            <div class="form-group">
+                <label for="userName">用户名</label>
+                <input type="text" id="userName" name="user_name" placeholder="用户名">
+            </div>
+            
+            <div class="form-group">
+                <label for="userMail">电子邮件</label>
+                <input type="text" id="userMail" name="user_mail" placeholder="电子邮件地址">
+            </div>
+            
+            <div class="form-group">
+                <label for="mobilePhone">手机号码</label>
+                <input type="text" id="mobilePhone" name="mobile_phone" placeholder="手机号码">
+            </div>
+            
+            <div class="form-group">
+                <label for="homeAddress">家庭住址</label>
+                <input type="text" id="homeAddress" name="home_address" placeholder="详细地址">
+            </div>
+            
+            <div class="form-group">
+                <label for="personalWebsite">个人网站</label>
+                <input type="text" id="personalWebsite" name="personal_website" placeholder="个人网站URL">
+            </div>
+            
+            <button type="submit">提交复杂表单</button>
+        </form>
+    </div>
+
+    <script>
+        // Prevent actual form submission for testing
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('表单提交已被阻止（测试模式）');
+            });
+        });
+
+        // Add some dynamic behavior to test the extension
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test page loaded - Ready for Smart Autofill Assistant testing');
+            
+            // Log form fields for debugging
+            const forms = document.querySelectorAll('form');
+            console.log(`Found ${forms.length} forms on page`);
+            
+            forms.forEach((form, index) => {
+                const fields = form.querySelectorAll('input, select, textarea');
+                console.log(`Form ${index + 1} has ${fields.length} fields`);
+            });
+        });
+    </script>
+</body>
+</html>

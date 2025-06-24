@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Autofill Assistant - Debug</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .debug-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1, h2 {
+            color: #333;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+        }
+        
+        .test-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Smart Autofill Assistant - Debug Tool</h1>
+    
+    <div class="debug-container">
+        <h2>Extension Status</h2>
+        <div id="extensionStatus" class="status info">Checking extension status...</div>
+        
+        <h2>Debug Actions</h2>
+        <button onclick="checkExtension()">Check Extension</button>
+        <button onclick="testStorage()">Test Storage</button>
+        <button onclick="testContentScript()">Test Content Script</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        
+        <h2>Debug Output</h2>
+        <pre id="debugOutput">Debug information will appear here...</pre>
+    </div>
+    
+    <!-- Test Form -->
+    <div class="test-form">
+        <h2>Test Form for Autofill</h2>
+        <form id="testForm">
+            <div class="form-group">
+                <label for="testEmail">Email Address</label>
+                <input type="email" id="testEmail" name="email" placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="testName">Full Name</label>
+                <input type="text" id="testName" name="fullName" placeholder="Enter your full name">
+            </div>
+            
+            <div class="form-group">
+                <label for="testPhone">Phone Number</label>
+                <input type="tel" id="testPhone" name="phone" placeholder="Enter your phone number">
+            </div>
+            
+            <div class="form-group">
+                <label for="testAddress">Address</label>
+                <textarea id="testAddress" name="address" rows="3" placeholder="Enter your address"></textarea>
+            </div>
+            
+            <button type="submit">Submit (Test Only)</button>
+        </form>
+    </div>
+
+    <script>
+        let debugOutput = document.getElementById('debugOutput');
+        let extensionStatus = document.getElementById('extensionStatus');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            debugOutput.textContent += `[${timestamp}] ${message}\n`;
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+            console.log(`[Debug] ${message}`);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            extensionStatus.textContent = message;
+            extensionStatus.className = `status ${type}`;
+        }
+        
+        async function checkExtension() {
+            log('Checking extension status...');
+            
+            try {
+                // Check if chrome.runtime is available
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    log('✓ Chrome runtime available');
+                    
+                    // Try to get extension ID
+                    const extensionId = chrome.runtime.id;
+                    log(`✓ Extension ID: ${extensionId}`);
+                    
+                    updateStatus('Extension is loaded and accessible', 'success');
+                } else {
+                    log('✗ Chrome runtime not available');
+                    updateStatus('Extension not detected', 'error');
+                }
+            } catch (error) {
+                log(`✗ Error checking extension: ${error.message}`);
+                updateStatus('Error checking extension', 'error');
+            }
+        }
+        
+        async function testStorage() {
+            log('Testing storage functionality...');
+            
+            try {
+                // Test data
+                const testData = {
+                    testKey: 'testValue',
+                    timestamp: Date.now()
+                };
+                
+                // Set data
+                await new Promise((resolve, reject) => {
+                    chrome.storage.local.set(testData, () => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+                log('✓ Storage write successful');
+                
+                // Get data
+                const result = await new Promise((resolve, reject) => {
+                    chrome.storage.local.get(['testKey'], (result) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+                
+                if (result.testKey === testData.testKey) {
+                    log('✓ Storage read successful');
+                    log(`Retrieved value: ${result.testKey}`);
+                } else {
+                    log('✗ Storage read failed - value mismatch');
+                }
+                
+                // Check profiles
+                const profiles = await new Promise((resolve, reject) => {
+                    chrome.storage.local.get(['profiles'], (result) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+                
+                log(`Current profiles: ${JSON.stringify(profiles.profiles || [], null, 2)}`);
+                
+            } catch (error) {
+                log(`✗ Storage test failed: ${error.message}`);
+            }
+        }
+        
+        async function testContentScript() {
+            log('Testing content script communication...');
+            
+            try {
+                // Get current tab
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                log(`Current tab: ${tab.url}`);
+                
+                // Test message to content script
+                const response = await chrome.tabs.sendMessage(tab.id, {
+                    type: 'GET_PAGE_INFO'
+                });
+                
+                if (response) {
+                    log('✓ Content script communication successful');
+                    log(`Page info: ${JSON.stringify(response, null, 2)}`);
+                } else {
+                    log('✗ No response from content script');
+                }
+                
+            } catch (error) {
+                log(`✗ Content script test failed: ${error.message}`);
+                
+                // Try to inject content script
+                try {
+                    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['src/content/content-script.js']
+                    });
+                    log('✓ Content script injected manually');
+                } catch (injectError) {
+                    log(`✗ Failed to inject content script: ${injectError.message}`);
+                }
+            }
+        }
+        
+        async function clearStorage() {
+            log('Clearing extension storage...');
+            
+            try {
+                await new Promise((resolve, reject) => {
+                    chrome.storage.local.clear(() => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+                log('✓ Storage cleared successfully');
+                updateStatus('Storage cleared', 'success');
+            } catch (error) {
+                log(`✗ Failed to clear storage: ${error.message}`);
+            }
+        }
+        
+        // Prevent form submission
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            log('Test form submission prevented');
+        });
+        
+        // Auto-check extension on load
+        window.addEventListener('load', function() {
+            setTimeout(checkExtension, 500);
+        });
+        
+        // Log page load
+        log('Debug page loaded');
+        log(`Page URL: ${window.location.href}`);
+        log(`User Agent: ${navigator.userAgent}`);
+    </script>
+</body>
+</html>

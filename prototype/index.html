@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Autofill Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 20px;
+            height: 600px;
+        }
+
+        .dashboard-item {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .dashboard-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .dashboard-item iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .item-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .profile-selector {
+            grid-column: 1 / 3;
+            grid-row: 1;
+        }
+
+        .settings {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .profile-editor {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .autofill-status {
+            grid-column: 1 / 3;
+            grid-row: 3;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 200px);
+                height: auto;
+            }
+
+            .profile-selector,
+            .settings,
+            .profile-editor,
+            .autofill-status {
+                grid-column: 1;
+                grid-row: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧾 Smart Autofill Assistant</h1>
+            <p>Intelligent form filling powered by AI</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-item profile-selector">
+                <div class="item-header">👤 Profile Selector</div>
+                <iframe src="profile-selector.html" title="Profile Selector"></iframe>
+            </div>
+
+            <div class="dashboard-item settings">
+                <div class="item-header">⚙️ Settings</div>
+                <iframe src="settings.html" title="Settings"></iframe>
+            </div>
+
+            <div class="dashboard-item profile-editor">
+                <div class="item-header">✏️ Profile Editor</div>
+                <iframe src="profile-editor.html" title="Profile Editor"></iframe>
+            </div>
+
+            <div class="dashboard-item autofill-status">
+                <div class="item-header">🚀 Autofill Status</div>
+                <iframe src="autofill-status.html" title="Autofill Status"></iframe>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

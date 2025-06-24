@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8fafc;
+            padding: 15px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100%;
+        }
+
+        .settings-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            height: calc(100% - 30px);
+            overflow-y: auto;
+        }
+
+        .settings-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-header h2 {
+            color: #2d3748;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+
+        .setting-label {
+            color: #2d3748;
+            font-size: 0.85rem;
+            flex: 1;
+        }
+
+        .setting-description {
+            color: #718096;
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #cbd5e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #667eea;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(20px);
+        }
+
+        .select-input {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: white;
+            min-width: 100px;
+        }
+
+        .text-input {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            background: white;
+            width: 120px;
+        }
+
+        .api-key-input {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: white;
+            width: 200px;
+            font-family: monospace;
+            transition: border-color 0.3s ease;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .api-key-input.error {
+            border-color: #e53e3e;
+        }
+
+        .save-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .btn-save:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-save:disabled {
+            background: #cbd5e0;
+            color: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .save-status {
+            color: #38a169;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .btn-small {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn-small:hover {
+            background: #5a67d8;
+        }
+
+        .btn-small.danger {
+            background: #e53e3e;
+        }
+
+        .btn-small.danger:hover {
+            background: #c53030;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #f0fff4;
+            color: #38a169;
+            border: 1px solid #c6f6d5;
+        }
+
+        .status-indicator.offline {
+            background: #fef5e7;
+            color: #d69e2e;
+            border-color: #fbd38d;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .model-info {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="settings-container">
+            <div class="settings-header">
+                <h2>⚙️ Settings</h2>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-title">
+                    🤖 AI Model Configuration
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <div class="setting-label">Model Service</div>
+                        <div class="setting-description">Choose AI model provider</div>
+                    </div>
+                    <select class="select-input" id="modelProvider">
+                        <option value="local">Local Flash-Lite</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="openai">OpenAI GPT</option>
+                        <option value="claude">Anthropic Claude</option>
+                    </select>
+                </div>
+                <div class="setting-item" id="apiKeySection" style="display: none;">
+                    <div>
+                        <div class="setting-label">API Key</div>
+                        <div class="setting-description">Enter your API key for the selected provider</div>
+                    </div>
+                    <input type="password" class="api-key-input" id="apiKeyInput" placeholder="Enter your API key...">
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <div class="setting-label">API Status</div>
+                    </div>
+                    <div class="status-indicator" id="apiStatus">
+                        <div class="status-dot"></div>
+                        Connected
+                    </div>
+                </div>
+                <div class="model-info">
+                    💡 Local model provides better privacy but requires setup. Remote models need API keys.
+                </div>
+                <div class="save-section">
+                    <button class="btn-save" id="saveBtn" disabled>
+                        💾 Save Settings
+                    </button>
+                    <div class="save-status" id="saveStatus" style="display: none;">
+                        ✅ Settings saved successfully!
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+
+
+        // DOM elements
+        const modelProvider = document.getElementById('modelProvider');
+        const apiKeySection = document.getElementById('apiKeySection');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiStatus = document.getElementById('apiStatus');
+        const saveBtn = document.getElementById('saveBtn');
+        const saveStatus = document.getElementById('saveStatus');
+
+        // Model provider change handler
+        modelProvider.addEventListener('change', function() {
+            const isRemoteProvider = this.value !== 'local';
+
+            // Show/hide API key section
+            apiKeySection.style.display = isRemoteProvider ? 'flex' : 'none';
+
+            // Update API status
+            updateApiStatus();
+
+            // Update save button state
+            updateSaveButtonState();
+
+            // Update placeholder text based on provider
+            updateApiKeyPlaceholder();
+        });
+
+        // API key input handler
+        apiKeyInput.addEventListener('input', function() {
+            // Remove error styling
+            this.classList.remove('error');
+
+            // Update save button state
+            updateSaveButtonState();
+
+            // Update API status if key is provided
+            if (this.value.trim()) {
+                updateApiStatus();
+            }
+        });
+
+        // Save button handler
+        saveBtn.addEventListener('click', function() {
+            if (validateSettings()) {
+                saveSettings();
+            }
+        });
+
+        // Update API status based on current settings
+        function updateApiStatus() {
+            const provider = modelProvider.value;
+            const hasApiKey = apiKeyInput.value.trim().length > 0;
+
+            if (provider === 'local') {
+                apiStatus.className = 'status-indicator';
+                apiStatus.innerHTML = '<div class="status-dot"></div>Connected';
+            } else if (hasApiKey) {
+                apiStatus.className = 'status-indicator';
+                apiStatus.innerHTML = '<div class="status-dot"></div>API Key Configured';
+            } else {
+                apiStatus.className = 'status-indicator offline';
+                apiStatus.innerHTML = '<div class="status-dot"></div>API Key Required';
+            }
+        }
+
+        // Update save button enabled/disabled state
+        function updateSaveButtonState() {
+            const provider = modelProvider.value;
+            const hasApiKey = apiKeyInput.value.trim().length > 0;
+            const isValid = provider === 'local' || hasApiKey;
+
+            saveBtn.disabled = !isValid;
+        }
+
+        // Update API key placeholder based on selected provider
+        function updateApiKeyPlaceholder() {
+            const provider = modelProvider.value;
+            const placeholders = {
+                'gemini': 'Enter your Google Gemini API key...',
+                'openai': 'Enter your OpenAI API key...',
+                'claude': 'Enter your Anthropic Claude API key...'
+            };
+
+            apiKeyInput.placeholder = placeholders[provider] || 'Enter your API key...';
+        }
+
+        // Validate current settings
+        function validateSettings() {
+            const provider = modelProvider.value;
+            const apiKey = apiKeyInput.value.trim();
+
+            if (provider !== 'local' && !apiKey) {
+                apiKeyInput.classList.add('error');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            const settings = {
+                modelProvider: modelProvider.value,
+                apiKey: modelProvider.value !== 'local' ? apiKeyInput.value.trim() : ''
+            };
+
+            // In a real implementation, this would save to localStorage
+            localStorage.setItem('autofillSettings', JSON.stringify(settings));
+
+            // Show success message
+            saveStatus.style.display = 'block';
+            setTimeout(() => {
+                saveStatus.style.display = 'none';
+            }, 3000);
+
+            // Update API status
+            updateApiStatus();
+        }
+
+        // Load saved settings on page load
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('autofillSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    modelProvider.value = settings.modelProvider || 'local';
+                    apiKeyInput.value = settings.apiKey || '';
+                }
+            } catch (e) {
+                console.log('No saved settings found');
+            }
+
+            // Trigger change event to update UI
+            modelProvider.dispatchEvent(new Event('change'));
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            loadSettings();
+        });
+    </script>
+</body>
+</html>
