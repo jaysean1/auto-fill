@@ -26,11 +26,13 @@ const elements = {
     startAutofillBtn: document.getElementById('startAutofillBtn'),
     
     // Progress and results
-    progressSection: document.getElementById('progressSection'),
+    progressResultsSection: document.getElementById('progressResultsSection'),
+    progressResultsTitle: document.getElementById('progressResultsTitle'),
+    progressContent: document.getElementById('progressContent'),
+    resultsContent: document.getElementById('resultsContent'),
     progressFill: document.getElementById('progressFill'),
     progressText: document.getElementById('progressText'),
     stepsList: document.getElementById('stepsList'),
-    resultsSection: document.getElementById('resultsSection'),
     resultsList: document.getElementById('resultsList'),
     
     // Settings
@@ -71,6 +73,9 @@ async function init() {
     
     // Update page info
     updateHeaderPageInfo();
+    
+    // Setup dynamic height adjustment
+    setupDynamicHeight();
     
     // Listen for messages from background script
     chrome.runtime.onMessage.addListener(handleMessage);
@@ -169,6 +174,9 @@ async function loadProfiles() {
         
         profiles = response.data || [];
         renderProfiles();
+        
+        // Adjust height after profiles are rendered
+        setTimeout(adjustProfileListHeight, 100);
     } catch (error) {
         console.error('Failed to load profiles:', error);
         showError('Failed to load profiles');
@@ -647,12 +655,17 @@ async function fillForm(tabId, fillData) {
 
 // Progress and results functions
 function showProgress() {
-    elements.progressSection.style.display = 'block';
-    elements.resultsSection.style.display = 'none';
+    elements.progressResultsSection.style.display = 'block';
+    elements.progressResultsTitle.textContent = 'Progress';
+    elements.progressContent.style.display = 'block';
+    elements.resultsContent.style.display = 'none';
     
     // Reset progress
     elements.progressFill.style.width = '0%';
     elements.progressText.textContent = '0% Complete';
+    
+    // Adjust profile list height after showing progress
+    setTimeout(adjustProfileListHeight, 100);
     
     // Simple progress animation
     let progress = 0;
@@ -668,20 +681,30 @@ function showProgress() {
 }
 
 function hideProgress() {
-    elements.progressSection.style.display = 'none';
+    elements.progressResultsSection.style.display = 'none';
+    
+    // Adjust profile list height after hiding progress
+    setTimeout(adjustProfileListHeight, 100);
 }
 
 function showResults(result) {
-    elements.resultsSection.style.display = 'block';
+    // Switch to results view in the same section
+    elements.progressResultsTitle.textContent = 'Fill Results';
+    elements.progressContent.style.display = 'none';
+    elements.resultsContent.style.display = 'block';
+    
     elements.resultsList.innerHTML = result.results.map(r => `
         <div class="field-result">
             <span class="field-name">${getFieldDisplayName(r.selector)}</span>
             <span class="field-status ${r.status}">
-                ${r.status === 'success' ? '✓ Filled' : 
-                  r.status === 'failed' ? '✗ Failed' : '⚠ Skipped'}
+                ${r.status === 'success' ? 'Filled' : 
+                  r.status === 'failed' ? 'Failed' : 'Skipped'}
             </span>
         </div>
     `).join('');
+    
+    // Adjust profile list height after showing results
+    setTimeout(adjustProfileListHeight, 100);
 }
 
 function getFieldDisplayName(selector) {
@@ -796,6 +819,83 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Dynamic height adjustment
+function setupDynamicHeight() {
+    adjustProfileListHeight();
+    
+    // Listen for window resize
+    window.addEventListener('resize', adjustProfileListHeight);
+    
+    // Listen for profile list changes
+    const observer = new MutationObserver(() => {
+        adjustProfileListHeight();
+    });
+    
+    if (elements.profileList) {
+        observer.observe(elements.profileList, { childList: true });
+    }
+}
+
+function adjustProfileListHeight() {
+    const profileSection = document.querySelector('.section.profile-section');
+    const profileList = elements.profileList;
+    
+    if (!profileSection || !profileList) return;
+    
+    // Get viewport height
+    const viewportHeight = window.innerHeight;
+    
+    // Calculate available space
+    const header = document.querySelector('.sidebar-header');
+    const navTabs = document.querySelector('.nav-tabs');
+    const sectionHeader = profileSection.querySelector('.section-header');
+    const infoSection = document.querySelector('.section.info-section');
+    const actionSection = document.querySelector('.section.action-section');
+    const progressResultsSection = document.querySelector('.section.progress-results-section');
+    
+    const headerHeight = header ? header.offsetHeight : 0;
+    const navTabsHeight = navTabs ? navTabs.offsetHeight : 0;
+    const sectionHeaderHeight = sectionHeader ? sectionHeader.offsetHeight : 0;
+    const infoSectionHeight = infoSection ? infoSection.offsetHeight : 0;
+    const actionSectionHeight = actionSection ? actionSection.offsetHeight : 0;
+    
+    // Calculate height of progress/results section if visible
+    let progressResultsSectionHeight = 0;
+    
+    if (progressResultsSection && progressResultsSection.style.display !== 'none') {
+        progressResultsSectionHeight = progressResultsSection.offsetHeight;
+    }
+    
+    // Calculate padding and margins
+    const profileSectionPadding = 32; // 16px top + 16px bottom
+    const profileSectionMargin = 16; // margin-bottom
+    const buffer = 40; // Extra buffer for safety (increased for better spacing)
+    
+    // Calculate available height for profile list
+    const usedHeight = headerHeight + navTabsHeight + sectionHeaderHeight + 
+                      infoSectionHeight + actionSectionHeight + 
+                      progressResultsSectionHeight +
+                      profileSectionPadding + profileSectionMargin + buffer;
+    
+    const availableHeight = viewportHeight - usedHeight;
+    
+    // Set minimum and maximum heights
+    const minHeight = 120; // Minimum height to show at least 1 profile
+    const maxHeight = Math.max(availableHeight, minHeight);
+    
+    // Apply the calculated height
+    profileList.style.maxHeight = `${maxHeight}px`;
+    
+    console.log('Profile list height adjusted:', {
+        viewportHeight,
+        usedHeight,
+        availableHeight,
+        finalHeight: maxHeight,
+        progressResultsVisible: progressResultsSection && progressResultsSection.style.display !== 'none',
+        progressResultsHeight: progressResultsSectionHeight
+    });
 }
 
 // Initialize when DOM is ready

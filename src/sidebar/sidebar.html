@@ -36,7 +36,7 @@
             <!-- Main Tab -->
             <div class="tab-pane active" id="main-tab">
                 <!-- Profile Selection Section -->
-                <div class="section">
+                <div class="section profile-section">
                     <div class="section-header">
                         <h3>Select Profile</h3>
                         <button class="btn btn-small btn-secondary" id="addProfileBtn">
@@ -51,7 +51,7 @@
                 </div>
 
                 <!-- Page Info Section -->
-                <div class="section">
+                <div class="section info-section">
                     <div class="page-info-card" id="pageInfoCard">
                         <div class="page-info-icon">📄</div>
                         <div class="page-info-content">
@@ -61,33 +61,38 @@
                     </div>
                 </div>
 
-                <!-- Action Section -->
-                <div class="section">
+                <!-- Progress & Results Section -->
+                <div class="section progress-results-section" id="progressResultsSection" style="display: none;">
+                    <div class="section-header">
+                        <h4 id="progressResultsTitle">Progress</h4>
+                    </div>
+                    
+                    <!-- Progress Content -->
+                    <div class="progress-content" id="progressContent">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">0% Complete</div>
+                        
+                        <div class="steps-list" id="stepsList">
+                            <!-- Steps will be populated during autofill -->
+                        </div>
+                    </div>
+                    
+                    <!-- Results Content -->
+                    <div class="results-content" id="resultsContent" style="display: none;">
+                        <div class="results-list" id="resultsList">
+                            <!-- Results will be populated after autofill -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Section - Always at bottom -->
+                <div class="section action-section">
                     <button class="btn btn-primary btn-large btn-full" id="startAutofillBtn" disabled>
                         <span class="btn-icon">🚀</span>
                         Start Autofill
                     </button>
-                </div>
-
-                <!-- Progress Section -->
-                <div class="section" id="progressSection" style="display: none;">
-                    <h4>Progress</h4>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">0% Complete</div>
-                    
-                    <div class="steps-list" id="stepsList">
-                        <!-- Steps will be populated during autofill -->
-                    </div>
-                </div>
-
-                <!-- Results Section -->
-                <div class="section" id="resultsSection" style="display: none;">
-                    <h4>Fill Results</h4>
-                    <div class="results-list" id="resultsList">
-                        <!-- Results will be populated after autofill -->
-                    </div>
                 </div>
             </div>
 
