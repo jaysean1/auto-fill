@@ -333,7 +333,7 @@ async function simulateTyping(element, text) {
     }));
     
     // Small delay to simulate human typing
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
 }
 

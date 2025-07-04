@@ -1,15 +1,17 @@
 # Smart Autofill Assistant
 
-智能表单自动填写助手 - 基于AI的浏览器插件，能够智能识别网页表单并自动填写用户信息。
+Smart Autofill Assistant - An AI-powered browser extension that intelligently recognizes web forms and automatically fills in user information.
 
-## 🚀 功能特性
+## 🚀 Features
 
-- **智能表单识别**: 使用AI模型分析页面结构，识别表单字段的语义含义
-- **自然语言配置**: 用户可以用自然语言描述个人信息，无需结构化输入
-- **多模型支持**: 支持本地Flash-Lite模型和远程AI服务（Gemini、OpenAI、Claude）
-- **隐私保护**: 所有用户数据存储在本地，不上传到服务器
-- **智能匹配**: 基于语义理解匹配用户信息到表单字段
-- **可视化反馈**: 提供填写过程的实时状态和结果反馈
+- 🧠 Intelligent Form Recognition: Uses AI models to analyze page structure and identify the semantic meaning of form fields.
+- ✍️ Natural Language Configuration: Users can describe their personal information in natural language, without structured input.
+- 🤖 Multi-Model Support: Supports local Flash-Lite models and remote AI services (Gemini, OpenAI, Claude).
+- 🔒 Privacy Protection: All user data is stored locally and is not uploaded to the server.
+- 🎯 Intelligent Matching: Matches user information to form fields based on semantic understanding.
+- ✨ Visual Feedback: Provides real-time status and result feedback during the filling process.
+
+
 
 ## 📋 系统要求
 
