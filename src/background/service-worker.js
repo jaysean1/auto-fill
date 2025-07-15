@@ -85,6 +85,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(data => sendResponse({ success: true, data }))
         .catch(error => sendResponse({ error: error.message }));
       return true;
+      
+    case 'GENERATE_SMART_FILL_DATA':
+      handleGenerateSmartFillData(message.data)
+        .then(data => sendResponse({ success: true, data }))
+        .catch(error => sendResponse({ error: error.message }));
+      return true;
   }
 });
 
@@ -154,6 +160,23 @@ async function handleGenerateFillData(data) {
     return { success: true, data: fillData };
   } catch (error) {
     console.error('Generate fill data failed:', error);
+    throw error;
+  }
+}
+
+// Generate smart fill data handler - Enhanced version
+async function handleGenerateSmartFillData(data) {
+  try {
+    console.log('Generating smart fill data for profile:', data.profile.name);
+    console.log('Analysis result forms:', data.analysisResult.forms?.length || 0);
+    
+    const settings = await getSettings();
+    const fillData = await generateSmartFillData(data.profile, data.analysisResult, settings);
+    
+    console.log('Smart fill data generated successfully:', Object.keys(fillData).length, 'fields');
+    return fillData;
+  } catch (error) {
+    console.error('Generate smart fill data failed:', error);
     throw error;
   }
 }
@@ -297,113 +320,168 @@ function buildSmartAnalysisPrompt(pageContent) {
   
   console.log('Building smart analysis prompt with metadata:', { url, title, language, pageType });
   
-  return `# 网页表单智能分析任务
+  const htmlContent = pageContent.html ? pageContent.html.substring(0, 100000) : 'No HTML content available';
+  
+  return `# Advanced Web Form Analysis Task
 
-## 页面信息
+## Page Context
 - URL: ${url}
-- 标题: ${title}
-- 语言: ${language}
-- 页面类型: ${pageType}
+- Title: ${title}
+- Language: ${language}
+- Page Type: ${pageType}
 
-## 任务要求
-请分析以下HTML内容，识别所有可填写的表单字段，并返回结构化的JSON格式结果。
+## Analysis Instructions
+You are an expert form analysis AI. Analyze the HTML content and identify ALL fillable form fields with high accuracy. Pay special attention to naming conventions and semantic meaning.
 
-### 字段识别要求
-1. 识别所有输入字段（input, select, textarea, contenteditable等）
-2. 确定每个字段的语义类型（email, name, phone, address等）
-3. 生成准确的CSS选择器
-4. 提取字段标签和上下文信息
-5. 评估字段的必填状态
+### Field Identification Strategy
+1. Complete Coverage: Find EVERY input, select, textarea element
+2. Smart Naming: Handle various naming conventions (camelCase, snake_case, kebab-case)
+3. Semantic Inference: Use labels, placeholders, names, and context clues
+4. Accurate Selectors: Generate reliable CSS selectors
 
-### 表单分组
-将相关字段分组为逻辑表单，类型包括：
-- login: 登录表单
-- registration: 注册表单
-- contact: 联系表单
-- checkout: 结账表单
-- profile: 个人资料表单
-- general: 通用表单
+### Enhanced Semantic Type Mapping
+Names and Identity:
+- "firstName", "fname", "first_name", "givenName" maps to "firstName"
+- "lastName", "lname", "last_name", "surname", "familyName" maps to "lastName"
+- "fullName", "name", "user_name", "userName", "displayName" maps to "fullName"
 
-### 输出格式
-返回严格的JSON格式：
-\`\`\`json
+Contact Information:
+- "email", "e-mail", "emailAddress", "user_mail", "contactEmail", "mail" maps to "email"
+- "phone", "phoneNumber", "tel", "telephone", "mobile", "mobile_phone", "mobilePhone" maps to "phone"
+- "website", "url", "homepage", "personal_website", "personalWebsite" maps to "website"
+
+Location Information:
+- "address", "streetAddress", "home_address", "homeAddress", "street" maps to "address"
+- "city", "town", "locality" maps to "city"
+- "state", "province", "region", "stateProvince" maps to "state"
+- "zipCode", "zip", "postalCode", "postal_code", "postcode" maps to "zipCode"
+- "country", "nation", "countryCode" maps to "country"
+
+Professional Information:
+- "company", "companyName", "organization", "employer" maps to "company"
+- "jobTitle", "title", "position", "role", "job_title" maps to "jobTitle"
+
+Personal Information:
+- "birthDate", "dateOfBirth", "birthday", "birth_date", "dob" maps to "dateOfBirth"
+- "password", "pwd", "pass" maps to "password"
+- "confirmPassword", "confirm_password", "passwordConfirm", "repeatPassword" maps to "confirmPassword"
+
+### Special Handling Rules
+1. Underscore Convention: Convert snake_case to camelCase semantics
+2. Multiple Similar Fields: Distinguish by context (e.g., "email" vs "contactEmail")
+3. Mixed Languages: Handle English labels with confidence
+4. Form Context: Use form titles and sections to improve accuracy
+
+### CSS Selector Generation
+Priority order for reliable selectors:
+1. ID selector if available: #elementId
+2. Name attribute if available: [name="elementName"]
+3. Type with context: input[type="inputType"]
+4. Form-scoped selector: form#formId input[name="fieldName"]
+
+### Output Structure
+Return ONLY valid JSON in this exact format:
 {
   "success": true,
   "analysis": {
-    "pageType": "表单页面类型",
+    "pageType": "registration",
     "confidence": 0.95,
     "forms": [
       {
-        "type": "表单类型",
-        "title": "表单标题",
-        "description": "表单描述",
+        "type": "registration",
+        "title": "User Registration Form",
+        "description": "Sign up form",
         "fields": [
           {
-            "selector": "CSS选择器",
-            "semanticType": "语义类型",
-            "label": "字段标签",
-            "type": "HTML类型",
+            "selector": "#firstName",
+            "semanticType": "firstName",
+            "label": "First Name",
+            "type": "text",
             "required": true,
-            "placeholder": "占位符文本",
+            "placeholder": "Enter your first name",
             "confidence": 0.9
           }
         ]
       }
     ],
-    "totalFields": 10
+    "totalFields": 24
   }
 }
-\`\`\`
 
-## HTML内容
-\`\`\`html
-${pageContent.html ? pageContent.html.substring(0, 100000) : 'No HTML content available'}  <!-- Limit content size -->
-\`\`\`
+### Quality Requirements
+- High Coverage: Identify 95%+ of fillable fields
+- Accurate Mapping: Match semantic types precisely
+- Reliable Selectors: Ensure selectors work in browser
+- Consistent Confidence: Use 0.9+ for clear matches, 0.7+ for likely matches
+- Complete JSON: Valid, parseable JSON structure
 
-请开始分析：`;
+### CRITICAL: Process ALL Fields
+Do not skip fields due to complexity or uncertainty. For unclear fields, use the most appropriate semantic type from the list above or "unknown" as last resort.
+
+## HTML Content to Analyze
+${htmlContent}
+
+IMPORTANT: Return complete analysis covering ALL form fields. Focus on accuracy and completeness.`;
 }
 
-// Parse AI response and validate structure
+// Parse AI response and validate structure with enhanced debugging
 function parseSmartAnalysisResponse(response) {
   try {
     console.log('=== Parsing AI Response ===');
     console.log('Response type:', typeof response);
     console.log('Response length:', response?.length || 0);
+    console.log('Response preview:', response?.substring(0, 200) + '...');
     
     if (!response || typeof response !== 'string') {
+      console.error('❌ Invalid response type:', typeof response);
       throw new Error('Invalid response: must be a non-empty string');
     }
     
     // Try to extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error('No JSON found in response:', response.substring(0, 500));
+      console.error('❌ No JSON found in response, full content:');
+      console.error(response);
       throw new Error('No valid JSON found in AI response');
     }
     
-    console.log('JSON match found, length:', jsonMatch[0].length);
+    console.log('✅ JSON match found, length:', jsonMatch[0].length);
+    console.log('JSON preview:', jsonMatch[0].substring(0, 300) + '...');
     
     const parsed = JSON.parse(jsonMatch[0]);
-    console.log('JSON parsed successfully, keys:', Object.keys(parsed));
+    console.log('✅ JSON parsed successfully, structure:', {
+      keys: Object.keys(parsed),
+      hasSuccess: !!parsed.success,
+      hasAnalysis: !!parsed.analysis
+    });
     
     // Validate structure
     if (!parsed.analysis || !Array.isArray(parsed.analysis.forms)) {
-      console.error('Invalid structure:', {
+      console.error('❌ Invalid analysis structure:', {
         hasAnalysis: !!parsed.analysis,
         analysisType: typeof parsed.analysis,
         hasForms: !!parsed.analysis?.forms,
         formsType: typeof parsed.analysis?.forms,
-        isFormsArray: Array.isArray(parsed.analysis?.forms)
+        isFormsArray: Array.isArray(parsed.analysis?.forms),
+        analysisKeys: parsed.analysis ? Object.keys(parsed.analysis) : 'N/A'
       });
       throw new Error('Invalid analysis structure: missing analysis.forms array');
     }
     
-    console.log('Initial forms count:', parsed.analysis.forms.length);
+    console.log('📊 Analysis structure validation passed:', {
+      formsCount: parsed.analysis.forms.length,
+      totalFields: parsed.analysis.totalFields,
+      confidence: parsed.analysis.confidence
+    });
     
-    // Validate and clean fields
+    // Enhanced field validation and cleaning
+    let totalValidFields = 0;
+    let totalInvalidFields = 0;
+    
     parsed.analysis.forms.forEach((form, formIndex) => {
-      console.log(`Processing form ${formIndex}:`, {
+      console.log(`🔍 Processing form ${formIndex}:`, {
         type: form.type,
+        title: form.title,
         hasFields: !!form.fields,
         fieldsType: typeof form.fields,
         isFieldsArray: Array.isArray(form.fields),
@@ -411,37 +489,86 @@ function parseSmartAnalysisResponse(response) {
       });
       
       if (!Array.isArray(form.fields)) {
-        console.warn(`Form ${formIndex} has invalid fields, resetting to empty array`);
+        console.warn(`⚠️ Form ${formIndex} has invalid fields, resetting to empty array`);
         form.fields = [];
       }
       
       const originalFieldsCount = form.fields.length;
-      form.fields = form.fields.filter(field => {
+      const validFields = [];
+      
+      form.fields.forEach((field, fieldIndex) => {
         const isValid = field.selector && field.semanticType && field.semanticType !== 'unknown';
-        if (!isValid) {
-          console.warn('Filtering out invalid field:', field);
+        const hasRequiredProps = field.selector && field.semanticType && field.type;
+        
+        console.log(`  Field ${fieldIndex}:`, {
+          selector: field.selector,
+          semanticType: field.semanticType,
+          type: field.type,
+          label: field.label,
+          required: field.required,
+          confidence: field.confidence,
+          isValid: isValid,
+          hasRequiredProps: hasRequiredProps
+        });
+        
+        if (isValid && hasRequiredProps) {
+          validFields.push(field);
+          totalValidFields++;
+        } else {
+          console.warn(`❌ Filtering out invalid field:`, {
+            reason: !field.selector ? 'missing selector' : 
+                   !field.semanticType ? 'missing semanticType' : 
+                   field.semanticType === 'unknown' ? 'semanticType is unknown' :
+                   !field.type ? 'missing type' : 'other validation failure',
+            field: field
+          });
+          totalInvalidFields++;
         }
-        return isValid;
       });
       
-      console.log(`Form ${formIndex} fields: ${originalFieldsCount} -> ${form.fields.length}`);
+      form.fields = validFields;
+      console.log(`📋 Form ${formIndex} field processing complete: ${originalFieldsCount} -> ${form.fields.length} valid fields`);
     });
     
     // Remove empty forms
     const originalFormsCount = parsed.analysis.forms.length;
-    parsed.analysis.forms = parsed.analysis.forms.filter(form => form.fields.length > 0);
-    console.log(`Forms after filtering: ${originalFormsCount} -> ${parsed.analysis.forms.length}`);
+    const validForms = parsed.analysis.forms.filter(form => form.fields.length > 0);
+    parsed.analysis.forms = validForms;
     
+    console.log('📈 Final validation summary:', {
+      originalForms: originalFormsCount,
+      validForms: parsed.analysis.forms.length,
+      totalValidFields: totalValidFields,
+      totalInvalidFields: totalInvalidFields,
+      validationRate: totalValidFields > 0 ? (totalValidFields / (totalValidFields + totalInvalidFields) * 100).toFixed(1) + '%' : '0%'
+    });
+    
+    // Update totalFields to reflect actual valid fields
+    parsed.analysis.totalFields = totalValidFields;
+    
+    if (parsed.analysis.forms.length === 0) {
+      console.error('❌ No valid forms found after processing');
+      throw new Error('AI analysis resulted in no valid forms with fillable fields');
+    }
+    
+    console.log('✅ AI response parsing completed successfully');
     return parsed.analysis;
     
   } catch (error) {
-    console.error('=== Failed to parse AI response ===');
-    console.error('Parse error type:', error.constructor.name);
-    console.error('Parse error message:', error.message);
+    console.error('❌ === Failed to parse AI response ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
     if (error instanceof SyntaxError) {
-      console.error('JSON parsing failed at position:', error.message.match(/position (\d+)/)?.[1]);
+      console.error('JSON parsing failed - position:', error.message.match(/position (\d+)/)?.[1]);
+      console.error('Character at error position:', response?.charAt(parseInt(error.message.match(/position (\d+)/)?.[1] || '0')));
     }
-    console.error('Response sample:', response?.substring(0, 1000));
+    console.error('Response debug info:', {
+      length: response?.length || 0,
+      firstLine: response?.split('\n')[0] || 'N/A',
+      lastLine: response?.split('\n').slice(-1)[0] || 'N/A',
+      containsJSON: response?.includes('{') && response?.includes('}')
+    });
+    console.error('Full response content:', response);
     throw new Error(`Invalid AI response format: ${error.message}`);
   }
 }
@@ -710,6 +837,187 @@ async function callRemoteAI(prompt, settings) {
   }
 }
 
+// Enhanced personal information preprocessing for Smart Fill
+function preprocessPersonalInfo(profile) {
+  console.log('Preprocessing personal info for profile:', profile.name);
+  
+  const processedInfo = {
+    original: profile.info,
+    parsed: {}
+  };
+  
+  const info = profile.info.toLowerCase();
+  
+  // Parse full name
+  if (profile.name) {
+    const nameParts = profile.name.trim().split(/\s+/);
+    if (nameParts.length >= 2) {
+      processedInfo.parsed.firstName = nameParts[0];
+      processedInfo.parsed.lastName = nameParts.slice(1).join(' ');
+    }
+    processedInfo.parsed.fullName = profile.name.trim();
+  }
+  
+  // Extract email
+  const emailMatch = profile.info.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  if (emailMatch) {
+    processedInfo.parsed.email = emailMatch[1];
+  }
+  
+  // Extract phone number
+  const phoneMatch = profile.info.match(/(\+?[\d\s\-\(\)]{10,})/);
+  if (phoneMatch) {
+    processedInfo.parsed.phone = phoneMatch[1].replace(/[\s\-\(\)]/g, '');
+  }
+  
+  // Extract and parse address
+  const addressMatch = profile.info.match(/(?:address?:?\s*)?(.+(?:Unit|Street|Road|Avenue|Drive|Lane|Way|Court|Place|NSW|VIC|QLD|SA|WA|TAS|NT|ACT).+?)(?:\n|$)/i);
+  if (addressMatch) {
+    const fullAddress = addressMatch[1].trim();
+    processedInfo.parsed.address = fullAddress;
+    
+    // Try to extract city, state, zipcode from address
+    const addressParts = fullAddress.split(',').map(part => part.trim());
+    if (addressParts.length >= 3) {
+      // Format: "Unit 308, 119 Ross Street (Eden), Glebe, NSW 2037, Australia"
+      processedInfo.parsed.city = addressParts[addressParts.length - 3];
+      
+      const lastPart = addressParts[addressParts.length - 2];
+      const stateZipMatch = lastPart.match(/(\w+)\s+(\d+)/);
+      if (stateZipMatch) {
+        processedInfo.parsed.state = stateZipMatch[1];
+        processedInfo.parsed.zipCode = stateZipMatch[2];
+      }
+    }
+  }
+  
+  // Extract birth date and convert formats
+  const birthMatch = profile.info.match(/(?:birth\s*date?:?\s*)?(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/i);
+  if (birthMatch) {
+    const year = birthMatch[1];
+    const month = birthMatch[2].padStart(2, '0');
+    const day = birthMatch[3].padStart(2, '0');
+    processedInfo.parsed.dateOfBirth = `${year}-${month}-${day}`;
+  }
+  
+  // Extract country and map to country codes
+  const countryMatch = profile.info.match(/(?:country:?\s*)?(china|australia|usa?|united\s+states|uk|united\s+kingdom|canada)/i);
+  if (countryMatch) {
+    const country = countryMatch[1].toLowerCase();
+    const countryMap = {
+      'china': 'CN',
+      'australia': 'AU',
+      'usa': 'US',
+      'united states': 'US',
+      'uk': 'UK',
+      'united kingdom': 'UK',
+      'canada': 'CA'
+    };
+    processedInfo.parsed.country = countryMap[country] || country;
+  }
+  
+  // Extract website
+  const websiteMatch = profile.info.match(/(https?:\/\/[^\s]+)/);
+  if (websiteMatch) {
+    processedInfo.parsed.website = websiteMatch[1];
+  }
+  
+  console.log('Processed personal info:', processedInfo.parsed);
+  return processedInfo;
+}
+
+// Generate fill data with enhanced personal info mapping
+async function generateSmartFillData(profile, analysisResult, settings) {
+  console.log('=== Generating Smart Fill Data ===');
+  console.log('Profile:', profile.name);
+  console.log('Analysis result forms:', analysisResult.forms?.length || 0);
+  
+  // Preprocess personal information
+  const processedInfo = preprocessPersonalInfo(profile);
+  
+  const fillData = {};
+  let fieldsProcessed = 0;
+  let fieldsMatched = 0;
+  
+  // Process each form and field
+  analysisResult.forms?.forEach((form, formIndex) => {
+    console.log(`Processing form ${formIndex}: ${form.type} with ${form.fields?.length || 0} fields`);
+    
+    form.fields?.forEach((field, fieldIndex) => {
+      fieldsProcessed++;
+      const selector = field.selector;
+      const semanticType = field.semanticType;
+      
+      console.log(`Field ${fieldIndex}: ${semanticType} (${selector})`);
+      
+      // Map semantic types to processed personal info
+      let value = null;
+      switch (semanticType) {
+        case 'firstName':
+          value = processedInfo.parsed.firstName;
+          break;
+        case 'lastName':
+          value = processedInfo.parsed.lastName;
+          break;
+        case 'fullName':
+          value = processedInfo.parsed.fullName;
+          break;
+        case 'email':
+          value = processedInfo.parsed.email;
+          break;
+        case 'phone':
+          value = processedInfo.parsed.phone;
+          break;
+        case 'address':
+          value = processedInfo.parsed.address;
+          break;
+        case 'city':
+          value = processedInfo.parsed.city;
+          break;
+        case 'state':
+          value = processedInfo.parsed.state;
+          break;
+        case 'zipCode':
+          value = processedInfo.parsed.zipCode;
+          break;
+        case 'country':
+          value = processedInfo.parsed.country;
+          break;
+        case 'dateOfBirth':
+          value = processedInfo.parsed.dateOfBirth;
+          break;
+        case 'website':
+          value = processedInfo.parsed.website;
+          break;
+        case 'password':
+          // For demo purposes, use a default password
+          value = 'Demo123!';
+          break;
+        case 'confirmPassword':
+          // For demo purposes, use the same default password
+          value = 'Demo123!';
+          break;
+        default:
+          console.log(`Unhandled semantic type: ${semanticType}`);
+          break;
+      }
+      
+      if (value && value.trim()) {
+        fillData[selector] = value.trim();
+        fieldsMatched++;
+        console.log(`✅ Mapped ${semanticType} → "${value}"`);
+      } else {
+        console.log(`❌ No value found for ${semanticType}`);
+      }
+    });
+  });
+  
+  console.log(`Fill data generation complete: ${fieldsMatched}/${fieldsProcessed} fields matched`);
+  console.log('Final fill data:', fillData);
+  
+  return fillData;
+}
+
 // Mock functions for local development
 function mockAnalysisResult(pageData) {
   const fields = [];
@@ -873,19 +1181,42 @@ async function getCurrentActiveTabId() {
 // Wrapper function to handle tabId resolution for Smart Fill
 async function handleSmartPageAnalysisWithTabId(pageContent, sender) {
   try {
+    console.log('=== Smart Page Analysis Started ===');
+    console.log('Sender info:', {
+      hasTab: !!sender.tab,
+      tabId: sender.tab?.id,
+      url: sender.tab?.url,
+      origin: sender.origin,
+      senderType: sender.tab ? 'content_script' : 'extension_page'
+    });
+    
     // Get tab ID from sender if available (content script), otherwise get current active tab (sidebar)
     let tabId;
     if (sender.tab && sender.tab.id) {
       tabId = sender.tab.id;
-      console.log('Using tab ID from sender:', tabId);
+      console.log('✅ Using tab ID from sender:', tabId);
     } else {
+      console.log('⚠️ No sender.tab found, getting current active tab...');
       tabId = await getCurrentActiveTabId();
-      console.log('Using current active tab ID:', tabId);
+      console.log('✅ Using current active tab ID:', tabId);
     }
     
-    return await handleSmartPageAnalysis(pageContent, tabId);
+    console.log('📄 Page content summary:', {
+      hasContent: !!pageContent,
+      htmlLength: pageContent?.html?.length || 0,
+      hasMetadata: !!pageContent?.metadata,
+      hasStats: !!pageContent?.stats
+    });
+    
+    const result = await handleSmartPageAnalysis(pageContent, tabId);
+    console.log('✅ Smart Page Analysis completed successfully');
+    return result;
   } catch (error) {
-    console.error('Failed to resolve tab ID for Smart Page Analysis:', error);
+    console.error('❌ Smart Page Analysis failed:', {
+      errorType: error.constructor.name,
+      errorMessage: error.message,
+      errorStack: error.stack?.split('\n').slice(0, 3).join('\n')
+    });
     throw error;
   }
 }

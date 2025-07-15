@@ -683,7 +683,7 @@ async function startSmartFill() {
         updateSmartFillStep(3, 'completed');
         updateSmartFillStep(4, 'current');
         const profile = profiles.find(p => p.name === selectedProfile);
-        const fillData = await generateSmartFillData(profile, analysisResult);
+        const fillData = await generateSmartFillDataFromBackground(profile, analysisResult);
         
         if (!fillData || Object.keys(fillData).length === 0) {
             throw new Error('Could not generate fill data from AI analysis');
@@ -799,27 +799,100 @@ async function extractPageContent(tabId) {
 
 // Perform smart analysis using AI
 async function performSmartAnalysis(pageContent) {
-    console.log('Performing smart analysis with AI');
-    
-    const response = await chrome.runtime.sendMessage({
-        type: 'SMART_ANALYZE_PAGE',
-        data: pageContent
+    console.log('🤖 Starting AI smart analysis...');
+    console.log('📊 Page content stats:', {
+        htmlLength: pageContent?.html?.length || 0,
+        formsFound: pageContent?.stats?.formCount || 0,
+        inputsFound: pageContent?.stats?.inputCount || 0,
+        url: pageContent?.metadata?.url || 'Unknown'
     });
     
-    if (response && response.error) {
-        throw new Error(response.error);
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'SMART_ANALYZE_PAGE',
+            data: pageContent
+        });
+        
+        console.log('📨 Received response from background:', {
+            hasResponse: !!response,
+            hasError: !!response?.error,
+            hasSuccess: !!response?.success,
+            hasData: !!response?.data,
+            responseKeys: response ? Object.keys(response) : []
+        });
+        
+        if (response && response.error) {
+            console.error('❌ AI analysis failed with error:', response.error);
+            throw new Error(`AI analysis failed: ${response.error}`);
+        }
+        
+        if (!response) {
+            console.error('❌ No response received from background');
+            throw new Error('No response received from AI analysis service');
+        }
+        
+        if (!response.success) {
+            console.error('❌ AI analysis response indicates failure:', response);
+            throw new Error('AI analysis service returned failure status');
+        }
+        
+        if (!response.data) {
+            console.error('❌ AI analysis response missing data:', response);
+            throw new Error('AI analysis response missing data');
+        }
+        
+        console.log('✅ AI analysis completed successfully:', {
+            formsFound: response.data.forms?.length || 0,
+            totalFields: response.data.totalFields || 0,
+            confidence: response.data.confidence || 'N/A'
+        });
+        
+        return response.data;
+    } catch (error) {
+        console.error('💥 performSmartAnalysis error:', {
+            errorType: error.constructor.name,
+            errorMessage: error.message,
+            errorStack: error.stack?.split('\n').slice(0, 5).join('\n')
+        });
+        throw error;
     }
-    
-    if (!response || !response.success || !response.data) {
-        throw new Error('AI analysis failed');
-    }
-    
-    return response.data;
 }
 
-// Generate fill data from smart analysis result
+// Generate fill data from smart analysis result using enhanced background processing
+async function generateSmartFillDataFromBackground(profile, analysisResult) {
+    console.log('Generating smart fill data via background script');
+    
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'GENERATE_SMART_FILL_DATA',
+            data: {
+                profile: profile,
+                analysisResult: analysisResult
+            }
+        });
+        
+        if (response && response.error) {
+            console.error('❌ Smart fill data generation failed:', response.error);
+            throw new Error(`Smart fill data generation failed: ${response.error}`);
+        }
+        
+        if (!response || !response.success) {
+            console.error('❌ Smart fill data generation response invalid:', response);
+            throw new Error('Invalid response from smart fill data generation');
+        }
+        
+        console.log('✅ Smart fill data generated successfully:', response.data);
+        return response.data;
+        
+    } catch (error) {
+        console.error('❌ Failed to generate smart fill data:', error);
+        throw error;
+    }
+}
+
+// Fallback: Generate fill data from smart analysis result (legacy method)
 async function generateSmartFillData(profile, analysisResult) {
-    console.log('Generating smart fill data');
+    console.log('Generating smart fill data (legacy method)');
     
     const fillData = {};
     
@@ -836,7 +909,7 @@ async function generateSmartFillData(profile, analysisResult) {
         });
     });
     
-    console.log('Generated smart fill data:', fillData);
+    console.log('Generated smart fill data (legacy):', fillData);
     return fillData;
 }
 

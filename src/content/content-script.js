@@ -310,23 +310,90 @@ async function fillForm(fillData) {
 
 // Fill individual field
 async function fillField(element, value) {
+  console.log(`Filling field: ${element.tagName}[${element.type || 'N/A'}] with value: "${value}"`);
+  
   // Focus the element
   element.focus();
   
-  // Clear existing value
-  element.value = '';
-  
-  // Simulate typing for better compatibility
-  if (element.type === 'text' || element.type === 'email' || element.type === 'tel' || element.tagName === 'TEXTAREA') {
-    await simulateTyping(element, value);
-  } else {
+  // Handle different field types
+  if (element.tagName === 'SELECT') {
+    // Handle select dropdown
+    await fillSelectField(element, value);
+  } else if (element.type === 'checkbox') {
+    // Handle checkbox
+    const shouldCheck = ['true', '1', 'yes', 'on', 'checked'].includes(value.toString().toLowerCase());
+    element.checked = shouldCheck;
+  } else if (element.type === 'radio') {
+    // Handle radio button
+    if (element.value === value || element.name === value) {
+      element.checked = true;
+    }
+  } else if (element.type === 'date') {
+    // Handle date input
     element.value = value;
+  } else if (element.type === 'password') {
+    // Handle password field - set directly without typing simulation
+    element.value = value;
+  } else {
+    // Handle text inputs, email, tel, textarea, etc.
+    element.value = '';
+    
+    if (element.type === 'text' || element.type === 'email' || element.type === 'tel' || 
+        element.type === 'url' || element.tagName === 'TEXTAREA') {
+      await simulateTyping(element, value);
+    } else {
+      element.value = value;
+    }
   }
   
   // Trigger events
   element.dispatchEvent(new Event('input', { bubbles: true }));
   element.dispatchEvent(new Event('change', { bubbles: true }));
   element.dispatchEvent(new Event('blur', { bubbles: true }));
+  
+  console.log(`Field filled successfully: ${element.tagName}[${element.type || 'N/A'}] = "${element.value || element.checked}"`);
+}
+
+// Handle select field filling with smart option matching
+async function fillSelectField(element, value) {
+  console.log(`Filling select field with options:`, Array.from(element.options).map(opt => ({ value: opt.value, text: opt.text })));
+  
+  // Try exact value match first
+  let option = Array.from(element.options).find(opt => opt.value === value);
+  
+  if (!option) {
+    // Try exact text match
+    option = Array.from(element.options).find(opt => opt.text.trim() === value.trim());
+  }
+  
+  if (!option) {
+    // Try case-insensitive text match
+    const valueLower = value.toLowerCase();
+    option = Array.from(element.options).find(opt => 
+      opt.text.toLowerCase().includes(valueLower) || 
+      opt.value.toLowerCase().includes(valueLower)
+    );
+  }
+  
+  if (!option) {
+    // Try partial match for country codes or common abbreviations
+    option = Array.from(element.options).find(opt => {
+      const optText = opt.text.toLowerCase();
+      const optValue = opt.value.toLowerCase();
+      return optText.startsWith(valueLower) || optValue.startsWith(valueLower) ||
+             valueLower.startsWith(optText) || valueLower.startsWith(optValue);
+    });
+  }
+  
+  if (option) {
+    element.value = option.value;
+    option.selected = true;
+    console.log(`Selected option: ${option.text} (value: ${option.value})`);
+  } else {
+    console.warn(`No matching option found for value: "${value}" in select field`);
+    // If no match found, try to set the value anyway
+    element.value = value;
+  }
 }
 
 // Simulate typing for better compatibility with modern forms
