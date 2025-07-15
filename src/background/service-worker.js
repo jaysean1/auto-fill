@@ -50,6 +50,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(error => sendResponse({ error: error.message }));
       return true;
       
+    case 'SMART_ANALYZE_PAGE':
+      handleSmartPageAnalysisWithTabId(message.data, sender)
+        .then(sendResponse)
+        .catch(error => sendResponse({ error: error.message }));
+      return true;
+      
     case 'GET_PROFILES':
       getProfiles()
         .then(data => sendResponse({ success: true, data }))
@@ -150,6 +156,396 @@ async function handleGenerateFillData(data) {
     console.error('Generate fill data failed:', error);
     throw error;
   }
+}
+
+// Smart Fill - AI-powered page analysis handler
+async function handleSmartPageAnalysis(pageContent, tabId) {
+  try {
+    console.log('=== Starting Smart Page Analysis ===');
+    console.log('Tab ID:', tabId);
+    console.log('Page content validation:', {
+      hasPageContent: !!pageContent,
+      pageContentType: typeof pageContent,
+      hasStats: !!pageContent?.stats,
+      hasMetadata: !!pageContent?.metadata,
+      hasHtml: !!pageContent?.html
+    });
+    
+    // Validate input parameters
+    if (!pageContent) {
+      throw new Error('pageContent parameter is required');
+    }
+    
+    if (!tabId) {
+      throw new Error('tabId parameter is required');
+    }
+    
+    console.log('Page content stats:', pageContent.stats || 'No stats available');
+    
+    const settings = await getSettings();
+    
+    // Check if using remote AI model
+    if (settings.modelProvider === 'local') {
+      throw new Error('Smart Fill requires a remote AI model (Gemini, OpenAI, or Claude)');
+    }
+    
+    // Validate API key
+    if (!settings.apiKey) {
+      throw new Error(`API key required for ${settings.modelProvider}`);
+    }
+    
+    // Perform AI analysis
+    const analysisResult = await analyzePageWithFullAI(pageContent, settings);
+    
+    console.log('Smart analysis completed successfully:', analysisResult);
+    
+    return { success: true, data: analysisResult };
+    
+  } catch (error) {
+    console.error('Smart page analysis failed:', error);
+    throw error;
+  }
+}
+
+// Full page AI analysis using Gemini 2.5 Flash
+async function analyzePageWithFullAI(pageContent, settings) {
+  try {
+    console.log('=== Starting Smart Page Analysis ===');
+    console.log('AI Provider:', settings.modelProvider);
+    console.log('Page content structure:', {
+      hasMetadata: !!pageContent.metadata,
+      hasStats: !!pageContent.stats,
+      hasHtml: !!pageContent.html,
+      htmlLength: pageContent.html?.length || 0
+    });
+    
+    // Validate input parameters
+    if (!pageContent) {
+      throw new Error('pageContent is required');
+    }
+    
+    if (!settings.apiKey) {
+      throw new Error(`API key is required for ${settings.modelProvider}`);
+    }
+    
+    const prompt = buildSmartAnalysisPrompt(pageContent);
+    console.log('Generated prompt length:', prompt.length);
+    
+    let response;
+    console.log('Calling AI API...');
+    switch (settings.modelProvider) {
+      case 'gemini':
+        response = await callGeminiAPI(prompt, settings.apiKey);
+        break;
+      case 'openai':
+        response = await callOpenAIAPI(prompt, settings.apiKey);
+        break;
+      case 'claude':
+        response = await callClaudeAPI(prompt, settings.apiKey);
+        break;
+      default:
+        throw new Error(`Unsupported AI provider: ${settings.modelProvider}`);
+    }
+    
+    console.log('AI response received, length:', response?.length || 0);
+    console.log('AI response preview:', response?.substring(0, 200) + '...');
+    
+    // Parse and validate AI response
+    const analysisResult = parseSmartAnalysisResponse(response);
+    console.log('Analysis result parsed successfully:', {
+      formsCount: analysisResult.forms?.length || 0,
+      totalFields: analysisResult.forms?.reduce((sum, form) => sum + (form.fields?.length || 0), 0) || 0
+    });
+    
+    return analysisResult;
+    
+  } catch (error) {
+    console.error('=== Smart Page Analysis Failed ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Settings:', {
+      modelProvider: settings.modelProvider,
+      hasApiKey: !!settings.apiKey,
+      apiKeyLength: settings.apiKey?.length || 0
+    });
+    throw error;
+  }
+}
+
+// Build AI prompt for smart analysis
+function buildSmartAnalysisPrompt(pageContent) {
+  console.log('Building smart analysis prompt for pageContent:', {
+    hasPageContent: !!pageContent,
+    pageContentType: typeof pageContent,
+    hasMetadata: !!pageContent?.metadata,
+    hasHtml: !!pageContent?.html,
+    hasStats: !!pageContent?.stats
+  });
+  
+  // Validate pageContent structure
+  if (!pageContent || typeof pageContent !== 'object') {
+    throw new Error('Invalid pageContent: must be an object');
+  }
+  
+  // Safely access metadata with fallback values
+  const metadata = pageContent.metadata || {};
+  const url = metadata.url || 'Unknown';
+  const title = metadata.title || 'Unknown';
+  const language = metadata.language || 'Unknown';
+  const pageType = metadata.pageType || 'Unknown';
+  
+  console.log('Building smart analysis prompt with metadata:', { url, title, language, pageType });
+  
+  return `# 网页表单智能分析任务
+
+## 页面信息
+- URL: ${url}
+- 标题: ${title}
+- 语言: ${language}
+- 页面类型: ${pageType}
+
+## 任务要求
+请分析以下HTML内容，识别所有可填写的表单字段，并返回结构化的JSON格式结果。
+
+### 字段识别要求
+1. 识别所有输入字段（input, select, textarea, contenteditable等）
+2. 确定每个字段的语义类型（email, name, phone, address等）
+3. 生成准确的CSS选择器
+4. 提取字段标签和上下文信息
+5. 评估字段的必填状态
+
+### 表单分组
+将相关字段分组为逻辑表单，类型包括：
+- login: 登录表单
+- registration: 注册表单
+- contact: 联系表单
+- checkout: 结账表单
+- profile: 个人资料表单
+- general: 通用表单
+
+### 输出格式
+返回严格的JSON格式：
+\`\`\`json
+{
+  "success": true,
+  "analysis": {
+    "pageType": "表单页面类型",
+    "confidence": 0.95,
+    "forms": [
+      {
+        "type": "表单类型",
+        "title": "表单标题",
+        "description": "表单描述",
+        "fields": [
+          {
+            "selector": "CSS选择器",
+            "semanticType": "语义类型",
+            "label": "字段标签",
+            "type": "HTML类型",
+            "required": true,
+            "placeholder": "占位符文本",
+            "confidence": 0.9
+          }
+        ]
+      }
+    ],
+    "totalFields": 10
+  }
+}
+\`\`\`
+
+## HTML内容
+\`\`\`html
+${pageContent.html ? pageContent.html.substring(0, 100000) : 'No HTML content available'}  <!-- Limit content size -->
+\`\`\`
+
+请开始分析：`;
+}
+
+// Parse AI response and validate structure
+function parseSmartAnalysisResponse(response) {
+  try {
+    console.log('=== Parsing AI Response ===');
+    console.log('Response type:', typeof response);
+    console.log('Response length:', response?.length || 0);
+    
+    if (!response || typeof response !== 'string') {
+      throw new Error('Invalid response: must be a non-empty string');
+    }
+    
+    // Try to extract JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', response.substring(0, 500));
+      throw new Error('No valid JSON found in AI response');
+    }
+    
+    console.log('JSON match found, length:', jsonMatch[0].length);
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log('JSON parsed successfully, keys:', Object.keys(parsed));
+    
+    // Validate structure
+    if (!parsed.analysis || !Array.isArray(parsed.analysis.forms)) {
+      console.error('Invalid structure:', {
+        hasAnalysis: !!parsed.analysis,
+        analysisType: typeof parsed.analysis,
+        hasForms: !!parsed.analysis?.forms,
+        formsType: typeof parsed.analysis?.forms,
+        isFormsArray: Array.isArray(parsed.analysis?.forms)
+      });
+      throw new Error('Invalid analysis structure: missing analysis.forms array');
+    }
+    
+    console.log('Initial forms count:', parsed.analysis.forms.length);
+    
+    // Validate and clean fields
+    parsed.analysis.forms.forEach((form, formIndex) => {
+      console.log(`Processing form ${formIndex}:`, {
+        type: form.type,
+        hasFields: !!form.fields,
+        fieldsType: typeof form.fields,
+        isFieldsArray: Array.isArray(form.fields),
+        fieldsLength: form.fields?.length || 0
+      });
+      
+      if (!Array.isArray(form.fields)) {
+        console.warn(`Form ${formIndex} has invalid fields, resetting to empty array`);
+        form.fields = [];
+      }
+      
+      const originalFieldsCount = form.fields.length;
+      form.fields = form.fields.filter(field => {
+        const isValid = field.selector && field.semanticType && field.semanticType !== 'unknown';
+        if (!isValid) {
+          console.warn('Filtering out invalid field:', field);
+        }
+        return isValid;
+      });
+      
+      console.log(`Form ${formIndex} fields: ${originalFieldsCount} -> ${form.fields.length}`);
+    });
+    
+    // Remove empty forms
+    const originalFormsCount = parsed.analysis.forms.length;
+    parsed.analysis.forms = parsed.analysis.forms.filter(form => form.fields.length > 0);
+    console.log(`Forms after filtering: ${originalFormsCount} -> ${parsed.analysis.forms.length}`);
+    
+    return parsed.analysis;
+    
+  } catch (error) {
+    console.error('=== Failed to parse AI response ===');
+    console.error('Parse error type:', error.constructor.name);
+    console.error('Parse error message:', error.message);
+    if (error instanceof SyntaxError) {
+      console.error('JSON parsing failed at position:', error.message.match(/position (\d+)/)?.[1]);
+    }
+    console.error('Response sample:', response?.substring(0, 1000));
+    throw new Error(`Invalid AI response format: ${error.message}`);
+  }
+}
+
+// API call functions for different providers
+async function callGeminiAPI(prompt, apiKey) {
+  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent';
+  
+  const requestBody = {
+    contents: [{
+      parts: [{ text: prompt }]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      topK: 1,
+      topP: 0.8,
+      maxOutputTokens: 8192,
+      responseMimeType: "application/json"
+    }
+  };
+  
+  const response = await fetch(`${endpoint}?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callOpenAIAPI(prompt, apiKey) {
+  const endpoint = 'https://api.openai.com/v1/chat/completions';
+  
+  const requestBody = {
+    model: 'gpt-4-turbo-preview',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a web form analysis expert. Analyze HTML content and return structured JSON data about form fields.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    temperature: 0.1,
+    max_tokens: 4000
+  };
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function callClaudeAPI(prompt, apiKey) {
+  const endpoint = 'https://api.anthropic.com/v1/messages';
+  
+  const requestBody = {
+    model: 'claude-3-sonnet-20240229',
+    max_tokens: 4000,
+    temperature: 0.1,
+    messages: [
+      {
+        role: 'user',
+        content: prompt
+      }
+    ]
+  };
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.content[0].text;
 }
 
 // AI integration functions
@@ -458,4 +854,38 @@ async function getSettings() {
 async function saveSettings(settings) {
   await chrome.storage.local.set({ settings });
   return { success: true };
+}
+
+// Helper function to get current active tab ID
+async function getCurrentActiveTabId() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length > 0) {
+      return tabs[0].id;
+    }
+    throw new Error('No active tab found');
+  } catch (error) {
+    console.error('Failed to get current active tab:', error);
+    throw error;
+  }
+}
+
+// Wrapper function to handle tabId resolution for Smart Fill
+async function handleSmartPageAnalysisWithTabId(pageContent, sender) {
+  try {
+    // Get tab ID from sender if available (content script), otherwise get current active tab (sidebar)
+    let tabId;
+    if (sender.tab && sender.tab.id) {
+      tabId = sender.tab.id;
+      console.log('Using tab ID from sender:', tabId);
+    } else {
+      tabId = await getCurrentActiveTabId();
+      console.log('Using current active tab ID:', tabId);
+    }
+    
+    return await handleSmartPageAnalysis(pageContent, tabId);
+  } catch (error) {
+    console.error('Failed to resolve tab ID for Smart Page Analysis:', error);
+    throw error;
+  }
 }

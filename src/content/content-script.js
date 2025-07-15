@@ -56,6 +56,19 @@ function handleMessage(message, sender, sendResponse) {
       sendResponse(pageInfo);
       break;
       
+    case 'EXTRACT_PAGE_CONTENT':
+      console.log('Content script handling EXTRACT_PAGE_CONTENT request');
+      extractPageContent()
+        .then(result => {
+          console.log('Content script sending page content:', result);
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Content script content extraction error:', error);
+          sendResponse({ error: error.message });
+        });
+      return true; // Keep message channel open for async response
+      
     default:
       console.log('Content script received unknown message type:', message.type);
       break;
@@ -409,6 +422,117 @@ function getPageInfo() {
     formCount: document.querySelectorAll('form').length,
     fieldCount: document.querySelectorAll('input, select, textarea').length
   };
+}
+
+// Smart Fill - Extract page content for AI analysis
+async function extractPageContent() {
+  console.log('Extracting page content for AI analysis');
+  
+  try {
+    // Get full body HTML
+    const bodyHTML = document.body.innerHTML;
+    
+    // Clean and optimize content
+    const cleanedHTML = cleanHTMLForAI(bodyHTML);
+    
+    // Extract page metadata
+    const pageMetadata = {
+      url: window.location.href,
+      title: document.title,
+      language: document.documentElement.lang || 'en',
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      pageType: inferPageType()
+    };
+    
+    // Calculate content stats
+    const stats = {
+      originalSize: bodyHTML.length,
+      cleanedSize: cleanedHTML.length,
+      estimatedTokens: estimateTokenCount(cleanedHTML),
+      formCount: document.querySelectorAll('form').length,
+      inputCount: document.querySelectorAll('input, select, textarea').length
+    };
+    
+    return {
+      success: true,
+      data: {
+        html: cleanedHTML,
+        metadata: pageMetadata,
+        stats: stats
+      }
+    };
+    
+  } catch (error) {
+    console.error('Failed to extract page content:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Clean HTML content for AI analysis
+function cleanHTMLForAI(html) {
+  let cleaned = html;
+  
+  // Remove script tags and their content
+  cleaned = cleaned.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove style tags and their content
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Remove noscript tags
+  cleaned = cleaned.replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '');
+  
+  // Remove comments
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+  
+  // Remove SVG content (can be large)
+  cleaned = cleaned.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '');
+  
+  // Simplify attributes - keep only important ones
+  cleaned = cleaned.replace(/\s+(class|id|name|type|placeholder|value|required|aria-label|aria-labelledby|for|role|data-[^=]+)=/g, ' $1=');
+  
+  // Remove excessive whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+// Estimate token count for content size control
+function estimateTokenCount(text) {
+  // Rough estimation: 1 token ≈ 4 characters for English, 1 token ≈ 1 character for Chinese
+  const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - englishChars - chineseChars;
+  
+  return Math.ceil(englishChars / 4) + chineseChars + Math.ceil(otherChars / 2);
+}
+
+// Infer page type based on content and URL
+function inferPageType() {
+  const url = window.location.href.toLowerCase();
+  const title = document.title.toLowerCase();
+  const bodyText = document.body.textContent.toLowerCase();
+  
+  // Check URL patterns
+  if (url.includes('login') || url.includes('signin')) return 'login';
+  if (url.includes('register') || url.includes('signup')) return 'registration';
+  if (url.includes('contact')) return 'contact';
+  if (url.includes('checkout') || url.includes('billing')) return 'checkout';
+  if (url.includes('profile') || url.includes('account')) return 'profile';
+  
+  // Check title and content
+  if (title.includes('login') || title.includes('sign in')) return 'login';
+  if (title.includes('register') || title.includes('sign up')) return 'registration';
+  if (title.includes('contact')) return 'contact';
+  if (bodyText.includes('login') && bodyText.includes('password')) return 'login';
+  if (bodyText.includes('register') && bodyText.includes('email')) return 'registration';
+  
+  return 'general';
 }
 
 // Initialize when DOM is ready

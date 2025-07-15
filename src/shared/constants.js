@@ -22,7 +22,13 @@ export const MESSAGE_TYPES = {
     SAVE_SETTINGS: 'SAVE_SETTINGS',
     
     // Page info
-    GET_PAGE_INFO: 'GET_PAGE_INFO'
+    GET_PAGE_INFO: 'GET_PAGE_INFO',
+    
+    // Smart Fill - AI-powered analysis
+    EXTRACT_PAGE_CONTENT: 'EXTRACT_PAGE_CONTENT',
+    SMART_ANALYZE_PAGE: 'SMART_ANALYZE_PAGE',
+    SMART_ANALYSIS_COMPLETE: 'SMART_ANALYSIS_COMPLETE',
+    GENERATE_SMART_FILL_DATA: 'GENERATE_SMART_FILL_DATA'
 };
 
 // Semantic field labels
@@ -77,6 +83,9 @@ export const DEFAULT_SETTINGS = {
     apiKey: '',
     autoAnalyze: true,
     debugMode: false,
+    enableSmartFill: true,
+    smartFillFallback: true,
+    maxContentSize: 500, // KB
     fillDelay: 50,
     maxRetries: 3,
     timeout: 30000

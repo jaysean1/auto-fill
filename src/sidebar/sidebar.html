@@ -89,10 +89,30 @@
 
                 <!-- Action Section - Always at bottom -->
                 <div class="section action-section">
-                    <button class="btn btn-primary btn-large btn-full" id="startAutofillBtn" disabled>
-                        <span class="btn-icon">🚀</span>
-                        Start Autofill
-                    </button>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-large" id="startAutofillBtn" disabled>
+                            <span class="btn-icon">🚀</span>
+                            传统模式
+                        </button>
+                        
+                        <button class="btn btn-smart btn-large" id="smartFillBtn" disabled>
+                            <span class="btn-icon">🧠</span>
+                            AI智能模式
+                            <span class="beta-tag">Beta</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Feature Description -->
+                    <div class="feature-description">
+                        <div class="feature-item">
+                            <span class="feature-icon">🚀</span>
+                            <span class="feature-text"><strong>传统模式:</strong> 基于DOM的表单分析和填充</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🧠</span>
+                            <span class="feature-text"><strong>AI智能模式:</strong> 基于AI的页面智能分析和填充</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -130,6 +150,31 @@
                         <label class="setting-label">Debug mode</label>
                         <div class="toggle-switch" id="debugModeToggle">
                             <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <!-- Smart Fill Settings -->
+                    <div class="setting-group smart-fill-settings">
+                        <h4 class="setting-section-title">智能填充设置</h4>
+                        
+                        <div class="setting-item">
+                            <label class="setting-label">启用智能填充功能</label>
+                            <div class="toggle-switch active" id="enableSmartFillToggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label class="setting-label">智能填充失败时自动降级</label>
+                            <div class="toggle-switch active" id="smartFillFallbackToggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label class="setting-label">最大页面内容大小 (KB)</label>
+                            <input type="number" class="setting-input setting-number" id="maxContentSize" value="500" min="100" max="2000">
+                            <div class="setting-help">控制发送给 AI 分析的页面内容大小</div>
                         </div>
                     </div>
 

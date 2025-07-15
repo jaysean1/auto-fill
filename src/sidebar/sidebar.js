@@ -24,6 +24,7 @@ const elements = {
     
     // Main action
     startAutofillBtn: document.getElementById('startAutofillBtn'),
+    smartFillBtn: document.getElementById('smartFillBtn'),
     
     // Progress and results
     progressResultsSection: document.getElementById('progressResultsSection'),
@@ -43,6 +44,11 @@ const elements = {
     debugModeToggle: document.getElementById('debugModeToggle'),
     apiStatus: document.getElementById('apiStatus'),
     saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+    
+    // Smart Fill Settings
+    enableSmartFillToggle: document.getElementById('enableSmartFillToggle'),
+    smartFillFallbackToggle: document.getElementById('smartFillFallbackToggle'),
+    maxContentSize: document.getElementById('maxContentSize'),
     
     // Modal
     profileModal: document.getElementById('profileModal'),
@@ -95,6 +101,7 @@ function setupEventListeners() {
     
     // Main action
     elements.startAutofillBtn.addEventListener('click', startAutofill);
+    elements.smartFillBtn.addEventListener('click', startSmartFill);
     
     // Settings
     elements.modelProvider.addEventListener('change', onModelProviderChange);
@@ -102,6 +109,11 @@ function setupEventListeners() {
     elements.autoAnalyzeToggle.addEventListener('click', toggleAutoAnalyze);
     elements.debugModeToggle.addEventListener('click', toggleDebugMode);
     elements.saveSettingsBtn.addEventListener('click', saveSettings);
+    
+    // Smart Fill Settings
+    elements.enableSmartFillToggle.addEventListener('click', toggleSmartFill);
+    elements.smartFillFallbackToggle.addEventListener('click', toggleSmartFillFallback);
+    elements.maxContentSize.addEventListener('input', onSettingsChange);
     
     // Modal
     elements.modalClose.addEventListener('click', closeProfileModal);
@@ -259,8 +271,9 @@ function selectProfile(profileName) {
         item.classList.toggle('selected', profile && profile.name === profileName);
     });
     
-    // Enable autofill button
+    // Enable both buttons
     elements.startAutofillBtn.disabled = false;
+    elements.smartFillBtn.disabled = false;
     
     // Update page info
     updatePageInfo(`Profile "${profileName}" selected`, 'Ready to start autofill');
@@ -342,6 +355,7 @@ async function deleteProfile(profileName) {
         if (selectedProfile === profileName) {
             selectedProfile = null;
             elements.startAutofillBtn.disabled = true;
+            elements.smartFillBtn.disabled = true;
             updatePageInfo('Ready to start', 'Select a profile to begin');
         }
         
@@ -393,9 +407,16 @@ function renderSettings() {
     
     elements.autoAnalyzeToggle.classList.toggle('active', settings.autoAnalyze !== false);
     elements.debugModeToggle.classList.toggle('active', settings.debugMode === true);
+    elements.enableSmartFillToggle.classList.toggle('active', settings.enableSmartFill !== false);
+    elements.smartFillFallbackToggle.classList.toggle('active', settings.smartFillFallback !== false);
+    elements.maxContentSize.value = settings.maxContentSize || 500;
     
     onModelProviderChange();
     updateApiStatus();
+    
+    // Update smart fill button state - always enabled when profile selected
+    const isEnabled = settings.enableSmartFill !== false;
+    elements.smartFillBtn.disabled = !selectedProfile;
 }
 
 function onModelProviderChange() {
@@ -454,6 +475,20 @@ function toggleDebugMode() {
     onSettingsChange();
 }
 
+function toggleSmartFill() {
+    elements.enableSmartFillToggle.classList.toggle('active');
+    onSettingsChange();
+    
+    // Update smart fill button state
+    const isEnabled = elements.enableSmartFillToggle.classList.contains('active');
+    elements.smartFillBtn.disabled = !isEnabled || !selectedProfile;
+}
+
+function toggleSmartFillFallback() {
+    elements.smartFillFallbackToggle.classList.toggle('active');
+    onSettingsChange();
+}
+
 function onSettingsChange() {
     const provider = elements.modelProvider.value;
     const hasApiKey = elements.apiKeyInput.value.trim().length > 0;
@@ -468,7 +503,10 @@ async function saveSettings() {
         modelProvider: elements.modelProvider.value,
         apiKey: elements.apiKeyInput.value.trim(),
         autoAnalyze: elements.autoAnalyzeToggle.classList.contains('active'),
-        debugMode: elements.debugModeToggle.classList.contains('active')
+        debugMode: elements.debugModeToggle.classList.contains('active'),
+        enableSmartFill: elements.enableSmartFillToggle.classList.contains('active'),
+        smartFillFallback: elements.smartFillFallbackToggle.classList.contains('active'),
+        maxContentSize: parseInt(elements.maxContentSize.value) || 500
     };
     
     try {
@@ -569,7 +607,361 @@ async function startAutofill() {
     } finally {
         isAutofillRunning = false;
         elements.startAutofillBtn.disabled = false;
+        elements.smartFillBtn.disabled = false;
     }
+}
+
+// Smart Fill functionality - AI-powered page analysis
+async function startSmartFill() {
+    if (!selectedProfile) {
+        showError('Please select a profile first');
+        return;
+    }
+    
+    if (isAutofillRunning) {
+        showError('Autofill is already running');
+        return;
+    }
+    
+    // Check if smart fill is enabled
+    if (!settings.enableSmartFill) {
+        showError('Smart Fill is disabled. Please enable it in Settings.');
+        return;
+    }
+    
+    console.log('Starting Smart Fill for profile:', selectedProfile);
+    
+    isAutofillRunning = true;
+    elements.startAutofillBtn.disabled = true;
+    elements.smartFillBtn.disabled = true;
+    
+    try {
+        // Show progress with Smart Fill specific steps
+        showSmartFillProgress();
+        
+        // Step 1: Get current tab and ensure content script is loaded
+        updatePageInfo('Preparing...', 'Checking page and loading scripts');
+        updateSmartFillStep(1, 'current');
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        await ensureContentScriptLoaded(tab.id);
+        
+        // Step 2: Extract full page content for AI analysis
+        updatePageInfo('Extracting content...', 'Preparing page content for AI analysis');
+        updateSmartFillStep(1, 'completed');
+        updateSmartFillStep(2, 'current');
+        const pageContent = await extractPageContent(tab.id);
+        
+        console.log('Extracted page content:', pageContent);
+        
+        // Check content size
+        if (pageContent.stats.estimatedTokens > settings.maxContentSize * 1000) {
+            throw new Error(`Page content too large (${Math.round(pageContent.stats.estimatedTokens/1000)}KB > ${settings.maxContentSize}KB limit)`);
+        }
+        
+        // Step 3: Perform AI analysis
+        updatePageInfo('AI Analysis...', 'Analyzing page structure with AI');
+        updateSmartFillStep(2, 'completed');
+        updateSmartFillStep(3, 'current');
+        const analysisResult = await performSmartAnalysis(pageContent);
+        
+        console.log('Smart analysis result:', analysisResult);
+        
+        if (!analysisResult.forms || analysisResult.forms.length === 0) {
+            throw new Error('AI could not identify any forms on this page');
+        }
+        
+        // Count total fields from AI analysis
+        const totalFields = analysisResult.forms.reduce((count, form) => count + form.fields.length, 0);
+        console.log(`AI identified ${totalFields} fillable fields`);
+        
+        if (totalFields === 0) {
+            throw new Error('AI analysis found forms but no fillable fields');
+        }
+        
+        // Step 4: Generate fill data using AI analysis
+        updatePageInfo('Generating data...', `AI found ${totalFields} fields, generating fill values`);
+        updateSmartFillStep(3, 'completed');
+        updateSmartFillStep(4, 'current');
+        const profile = profiles.find(p => p.name === selectedProfile);
+        const fillData = await generateSmartFillData(profile, analysisResult);
+        
+        if (!fillData || Object.keys(fillData).length === 0) {
+            throw new Error('Could not generate fill data from AI analysis');
+        }
+        
+        // Step 5: Fill the form
+        updatePageInfo('Smart filling...', 'Injecting AI-generated data into form fields');
+        updateSmartFillStep(4, 'completed');
+        updateSmartFillStep(5, 'current');
+        const fillResult = await fillForm(tab.id, fillData);
+        
+        // Step 6: Show results
+        updateSmartFillStep(5, 'completed');
+        showResults(fillResult, 'smart-fill');
+        updatePageInfo('Smart Fill complete!', `${fillResult.successCount}/${fillResult.totalFields} fields filled successfully`);
+        
+    } catch (error) {
+        console.error('Smart Fill failed:', error);
+        
+        // Check if fallback is enabled
+        if (settings.smartFillFallback) {
+            console.log('Smart Fill failed, attempting fallback to traditional method');
+            showError(`Smart Fill failed: ${error.message}. Trying traditional method...`);
+            
+            try {
+                // Reset UI state
+                hideProgress();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Call traditional autofill
+                await startAutofillFallback();
+                return;
+                
+            } catch (fallbackError) {
+                console.error('Fallback also failed:', fallbackError);
+                showError(`Both Smart Fill and fallback failed: ${fallbackError.message}`);
+            }
+        } else {
+            showError(`Smart Fill failed: ${error.message}`);
+        }
+        
+        updatePageInfo('Smart Fill failed', error.message);
+        hideProgress();
+    } finally {
+        isAutofillRunning = false;
+        elements.startAutofillBtn.disabled = false;
+        elements.smartFillBtn.disabled = false;
+    }
+}
+
+// Fallback to traditional autofill method
+async function startAutofillFallback() {
+    console.log('Starting traditional autofill as fallback');
+    
+    // Show progress
+    showProgress();
+    
+    // Step 1: Get current tab
+    updatePageInfo('Fallback mode...', 'Using traditional form analysis');
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    // Step 2: Analyze page structure (traditional way)
+    updatePageInfo('Analyzing page...', 'Detecting form fields (traditional method)');
+    const pageData = await getPageData(tab.id);
+    
+    if (!pageData.forms || pageData.forms.length === 0) {
+        throw new Error('No forms found on this page (fallback)');
+    }
+    
+    const totalFields = pageData.forms.reduce((count, form) => count + form.fields.length, 0);
+    if (totalFields === 0) {
+        throw new Error('No fillable fields found (fallback)');
+    }
+    
+    // Step 3: Generate fill data
+    updatePageInfo('Matching data...', `Found ${totalFields} fields (fallback method)`);
+    const profile = profiles.find(p => p.name === selectedProfile);
+    const fillData = await generateFillData(profile, pageData);
+    
+    if (!fillData || Object.keys(fillData).length === 0) {
+        throw new Error('No matching data could be generated (fallback)');
+    }
+    
+    // Step 4: Fill the form
+    updatePageInfo('Filling form...', 'Injecting data (fallback method)');
+    const fillResult = await fillForm(tab.id, fillData);
+    
+    // Step 5: Show results
+    showResults(fillResult, 'fallback');
+    updatePageInfo('Fallback complete!', `${fillResult.successCount}/${fillResult.totalFields} fields filled successfully`);
+}
+
+// Smart Fill helper functions
+
+// Extract page content for AI analysis
+async function extractPageContent(tabId) {
+    console.log('Extracting page content for AI analysis');
+    
+    const response = await chrome.tabs.sendMessage(tabId, {
+        type: 'EXTRACT_PAGE_CONTENT'
+    });
+    
+    if (response && response.error) {
+        throw new Error(response.error);
+    }
+    
+    if (!response || !response.success || !response.data) {
+        throw new Error('Failed to extract page content');
+    }
+    
+    return response.data;
+}
+
+// Perform smart analysis using AI
+async function performSmartAnalysis(pageContent) {
+    console.log('Performing smart analysis with AI');
+    
+    const response = await chrome.runtime.sendMessage({
+        type: 'SMART_ANALYZE_PAGE',
+        data: pageContent
+    });
+    
+    if (response && response.error) {
+        throw new Error(response.error);
+    }
+    
+    if (!response || !response.success || !response.data) {
+        throw new Error('AI analysis failed');
+    }
+    
+    return response.data;
+}
+
+// Generate fill data from smart analysis result
+async function generateSmartFillData(profile, analysisResult) {
+    console.log('Generating smart fill data');
+    
+    const fillData = {};
+    
+    // Process each form from AI analysis
+    analysisResult.forms.forEach(form => {
+        form.fields.forEach(field => {
+            if (field.selector && field.semanticType && field.semanticType !== 'unknown') {
+                // Use AI-determined semantic type to match profile data
+                const value = extractValueFromProfile(profile.info, field.semanticType, field.label);
+                if (value) {
+                    fillData[field.selector] = value;
+                }
+            }
+        });
+    });
+    
+    console.log('Generated smart fill data:', fillData);
+    return fillData;
+}
+
+// Extract value from profile based on semantic type
+function extractValueFromProfile(profileInfo, semanticType, fieldLabel) {
+    const info = profileInfo.toLowerCase();
+    
+    switch (semanticType) {
+        case 'email':
+            const emailMatch = info.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+            return emailMatch ? emailMatch[1] : null;
+            
+        case 'firstName':
+            // Try to extract first name from various patterns
+            const firstNamePatterns = [
+                /我叫([^\s，,]+)/,
+                /名字[是叫]([^\s，,]+)/,
+                /first name[:\s]+([^\s，,]+)/i,
+                /名[：:]([^\s，,]+)/
+            ];
+            for (const pattern of firstNamePatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1];
+            }
+            break;
+            
+        case 'lastName':
+            // Try to extract last name
+            const lastNamePatterns = [
+                /姓([^\s，,]+)/,
+                /last name[:\s]+([^\s，,]+)/i,
+                /family name[:\s]+([^\s，,]+)/i
+            ];
+            for (const pattern of lastNamePatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1];
+            }
+            break;
+            
+        case 'fullName':
+            const fullNamePatterns = [
+                /我叫([^\s，,]+)/,
+                /名字[是叫]([^\s，,]+)/,
+                /英文名[是叫]([^\s，,]+)/,
+                /name[:\s]+([^\s，,]+)/i
+            ];
+            for (const pattern of fullNamePatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1];
+            }
+            break;
+            
+        case 'phone':
+            const phoneMatch = info.match(/(\+?[\d\s\-\(\)]{10,})/);
+            return phoneMatch ? phoneMatch[1].replace(/\s/g, '') : null;
+            
+        case 'dateOfBirth':
+            const datePatterns = [
+                /出生[于在]?(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/,
+                /生日[是:]?(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/,
+                /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
+            ];
+            for (const pattern of datePatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1];
+            }
+            break;
+            
+        case 'address':
+            const addressPatterns = [
+                /地址[是:]?([^，,。.]+)/,
+                /住[在址]([^，,。.]+)/,
+                /address[:\s]+([^，,。.]+)/i
+            ];
+            for (const pattern of addressPatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1].trim();
+            }
+            break;
+            
+        case 'city':
+            const cityPatterns = [
+                /在([^，,。.]*[市城])/,
+                /city[:\s]+([^\s，,]+)/i
+            ];
+            for (const pattern of cityPatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1];
+            }
+            break;
+            
+        case 'company':
+            const companyPatterns = [
+                /公司[是:]?([^，,。.]+)/,
+                /工作[在于]([^，,。.]+)/,
+                /company[:\s]+([^，,。.]+)/i
+            ];
+            for (const pattern of companyPatterns) {
+                const match = info.match(pattern);
+                if (match) return match[1].trim();
+            }
+            break;
+            
+        case 'website':
+            const urlMatch = info.match(/(https?:\/\/[^\s]+)/);
+            return urlMatch ? urlMatch[1] : null;
+            
+        default:
+            // For unknown types, try to match based on field label
+            if (fieldLabel) {
+                const labelLower = fieldLabel.toLowerCase();
+                if (labelLower.includes('email') || labelLower.includes('邮箱')) {
+                    return extractValueFromProfile(profileInfo, 'email');
+                }
+                if (labelLower.includes('name') || labelLower.includes('姓名')) {
+                    return extractValueFromProfile(profileInfo, 'fullName');
+                }
+                if (labelLower.includes('phone') || labelLower.includes('电话')) {
+                    return extractValueFromProfile(profileInfo, 'phone');
+                }
+            }
+            return null;
+    }
+    
+    return null;
 }
 
 async function ensureContentScriptLoaded(tabId) {
@@ -704,6 +1096,99 @@ function showResults(result) {
     `).join('');
     
     // Adjust profile list height after showing results
+    setTimeout(adjustProfileListHeight, 100);
+}
+
+// Smart Fill progress functions
+function showSmartFillProgress() {
+    elements.progressResultsSection.style.display = 'block';
+    elements.progressResultsTitle.textContent = 'Smart Fill Progress';
+    elements.progressContent.style.display = 'block';
+    elements.resultsContent.style.display = 'none';
+    
+    // Reset progress
+    elements.progressFill.style.width = '0%';
+    elements.progressText.textContent = '0% Complete';
+    
+    // Clear existing steps
+    elements.stepsList.innerHTML = '';
+    
+    // Add Smart Fill specific steps
+    const smartFillSteps = [
+        'Extracting page content',
+        'AI analyzing page structure',
+        'Identifying form fields',
+        'Generating fill data',
+        'Filling form fields',
+        'Validation complete'
+    ];
+    
+    smartFillSteps.forEach((step, index) => {
+        const stepElement = document.createElement('div');
+        stepElement.className = 'step-item';
+        stepElement.innerHTML = `
+            <div class="step-icon pending" data-step="${index + 1}">${index + 1}</div>
+            <div class="step-text pending">${step}</div>
+        `;
+        elements.stepsList.appendChild(stepElement);
+    });
+    
+    // Adjust profile list height
+    setTimeout(adjustProfileListHeight, 100);
+}
+
+function updateSmartFillStep(stepNumber, status) {
+    const stepElements = elements.stepsList.querySelectorAll('.step-item');
+    if (stepElements[stepNumber - 1]) {
+        const stepElement = stepElements[stepNumber - 1];
+        const icon = stepElement.querySelector('.step-icon');
+        const text = stepElement.querySelector('.step-text');
+        
+        // Remove existing classes
+        icon.className = `step-icon ${status}`;
+        text.className = `step-text ${status}`;
+        
+        // Update icon content based on status
+        if (status === 'completed') {
+            icon.textContent = '✓';
+        } else if (status === 'current') {
+            icon.textContent = stepNumber;
+        }
+        
+        // Update progress bar
+        const progress = (stepNumber / 6) * 100;
+        elements.progressFill.style.width = progress + '%';
+        elements.progressText.textContent = Math.round(progress) + '% Complete';
+    }
+}
+
+// Enhanced results display for Smart Fill
+function showResults(result, source = 'traditional') {
+    // Switch to results view
+    elements.progressResultsTitle.textContent = source === 'smart-fill' ? 'Smart Fill Results' : 
+                                               source === 'fallback' ? 'Fallback Results' : 'Fill Results';
+    elements.progressContent.style.display = 'none';
+    elements.resultsContent.style.display = 'block';
+    
+    // Add source indicator
+    let sourceIndicator = '';
+    if (source === 'smart-fill') {
+        sourceIndicator = '<div class="result-source">🧠 AI Analysis</div>';
+    } else if (source === 'fallback') {
+        sourceIndicator = '<div class="result-source">⚡ Fallback Mode</div>';
+    }
+    
+    elements.resultsList.innerHTML = sourceIndicator + result.results.map(r => `
+        <div class="field-result">
+            <span class="field-name">${getFieldDisplayName(r.selector)}</span>
+            <span class="field-status ${r.status}">
+                ${r.status === 'success' ? 'Filled' : 
+                  r.status === 'failed' ? 'Failed' : 'Skipped'}
+            </span>
+        </div>
+    `).join('');
+    
+    // Adjust profile list height
     setTimeout(adjustProfileListHeight, 100);
 }
 
